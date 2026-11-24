@@ -1,0 +1,66 @@
+name: PR Convention Check
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+jobs:
+  check-jira-convention:
+    name: Check Jira Key & PR Convention
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate Branch Flow & Jira Issue Key (MC-xx)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const headBranch = pr.head.ref;
+            const baseBranch = pr.base.ref;
+            const title = pr.title || '';
+
+            core.info(`Base branch: ${baseBranch}`);
+            core.info(`Head branch: ${headBranch}`);
+            core.info(`PR title: ${title}`);
+
+            // 1. Cho phép Release PR từ develop hoặc release/* vào main
+            if (baseBranch === 'main' && (headBranch === 'develop' || headBranch.startsWith('release/'))) {
+              core.info('✅ Release PR hợp lệ vào nhánh main.');
+              return;
+            }
+
+            // 2. Chỉ cho phép develop, release/*, hotfix/* merge vào main
+            if (baseBranch === 'main' && !headBranch.startsWith('hotfix/')) {
+              core.setFailed(
+                `❌ Không được merge trực tiếp nhánh "${headBranch}" vào "main".\n` +
+                `👉 Hãy đổi nhánh đích (base branch) sang "develop". Chỉ "develop", "release/*" hoặc "hotfix/MC-..." mới được merge vào "main".`
+              );
+              return;
+            }
+
+            // 3. Kiểm tra quy ước tên nhánh: <type>/MC-<số>-<mô-tả>
+            const branchRegex = /^(feature|fix|hotfix|docs|chore|refactor|test)\/MC-[0-9]+([_-][A-Za-z0-9._-]+)?$/;
+            const errors = [];
+
+            if (!branchRegex.test(headBranch)) {
+              errors.push(
+                `❌ Tên nhánh "${headBranch}" chưa đúng quy ước.\n` +
+                `   Định dạng đúng: <feature|fix|hotfix|docs|chore|refactor|test>/MC-<số>-<mô-tả>\n` +
+                `   Ví dụ: feature/MC-12-quan-ly-mon-an`
+              );
+            }
+
+            // 4. Kiểm tra tiêu đề PR có mã Jira MC-<số>
+            const jiraKeyRegex = /\bMC-[0-9]+\b/;
+            if (!jiraKeyRegex.test(title)) {
+              errors.push(
+                `❌ Tiêu đề PR "${title}" chưa có mã task Jira (MC-<số>).\n` +
+                `   Ví dụ đúng: [MC-12] Thêm chức năng quản lý món ăn`
+              );
+            }
+
+            if (errors.length > 0) {
+              core.setFailed(errors.join('\n\n'));
+              return;
+            }
+
+            core.info('✅ Tên nhánh, luồng nhánh và tiêu đề PR đều đạt chuẩn Jira MC!');
