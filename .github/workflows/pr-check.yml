@@ -37,15 +37,15 @@ jobs:
               return;
             }
 
-            // 3. Kiểm tra quy ước tên nhánh: <type>/MC-<số>-<mô-tả>
-            const branchRegex = /^(feature|fix|hotfix|docs|chore|refactor|test)\/MC-[0-9]+([_-][A-Za-z0-9._-]+)?$/;
+            // 3. Kiểm tra quy ước tên nhánh: [<type>/]MC-<số>[-<mô-tả>] (hỗ trợ cả nhánh tạo từ Jira)
+            const branchRegex = /^((feature|fix|hotfix|docs|chore|refactor|test)\/)?MC-[0-9]+([_-][^\s/]+)?$/u;
             const errors = [];
 
             if (!branchRegex.test(headBranch)) {
               errors.push(
                 `❌ Tên nhánh "${headBranch}" chưa đúng quy ước.\n` +
-                `   Định dạng đúng: <feature|fix|hotfix|docs|chore|refactor|test>/MC-<số>-<mô-tả>\n` +
-                `   Ví dụ: feature/MC-12-quan-ly-mon-an`
+                `   Định dạng đúng: [<feature|fix|hotfix|docs|chore|refactor|test>/]MC-<số>-<mô-tả>\n` +
+                `   Ví dụ: feature/MC-12-quan-ly-mon-an hoặc MC-12-quan-ly-mon-an (tạo từ Jira)`
               );
             }
 
