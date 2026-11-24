@@ -15,6 +15,7 @@ Dự án sử dụng **GitFlow rút gọn** kết hợp tự động hóa đồn
 | `hotfix/MC-<số>-<mô-tả>` | Sửa lỗi khẩn cấp trên bản đã demo/release | Tách từ `main`, PR về `main` (và merge ngược lại `develop`). |
 | `docs/MC-<số>-<mô-tả>` | Viết tài liệu QLDA, biểu đồ, README | Tách từ `develop`, PR về `develop`. |
 | `chore/MC-<số>-<mô-tả>` | Cấu hình dự án, CI/CD, cài thư viện | Tách từ `develop`, PR về `develop`. |
+| `MC-<số>-<mô-tả>` *(tạo từ Jira)* | Nhánh tạo trực tiếp bằng nút **Create branch** trên Jira | Tách từ `develop`, PR về `develop` (hỗ trợ tiếng Việt có dấu). |
 
 ---
 
@@ -22,8 +23,8 @@ Dự án sử dụng **GitFlow rút gọn** kết hợp tự động hóa đồn
 
 Để Jira tự động nhận diện và chuyển trạng thái task, luôn gắn đúng mã `MC-<số>`:
 
-1. **Tên nhánh**: `feature/MC-12-quan-ly-mon-an`
-2. **Commit message**: `MC-12: thêm API lấy danh sách món ăn`
+1. **Tên nhánh**: `[<loại>/]MC-<số>-<mô-tả>` *(VD: `feature/MC-12-quan-ly-mon-an` hoặc `MC-66-ba-khảo-sat-...` tạo từ Jira)*
+2. **Commit message**: `MC-<số> [<PM|BA|FS|AI|US-xx>] <Mô tả>` *(VD: `MC-65 [PM] Khởi tạo Jira (SCRUM), MS Project, Kick-off và Bộ tài liệu D01/D14/D17`)*
 3. **Tiêu đề Pull Request**: `[MC-12] Thêm chức năng quản lý món ăn`
 
 > GitHub Actions (`Check Jira Key & PR Convention`) sẽ tự động kiểm tra tên nhánh và tiêu đề PR. Nếu thiếu mã `MC-<số>`, nút Merge sẽ bị khóa cho đến khi sửa lại đúng chuẩn.
@@ -57,7 +58,7 @@ git checkout -b feature/MC-12-quan-ly-mon-an
 ### Bước 3: Code, commit và push nhánh lên GitHub
 ```bash
 git add .
-git commit -m "MC-12: tạo giao diện danh sách món ăn"
+git commit -m "MC-12 [FS] Tạo giao diện danh sách món ăn"
 git push -u origin feature/MC-12-quan-ly-mon-an
 ```
 *(Ngay khi push nhánh lên GitHub, Jira tự chuyển `MC-12` sang **In Progress**)*
