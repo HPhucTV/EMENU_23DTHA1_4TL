@@ -1,0 +1,76 @@
+name: Jira Sync on PR Changes Requested
+
+on:
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  notify-jira-on-reject:
+    name: Notify Jira on Changes Requested
+    if: github.event.review.state == 'changes_requested'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Jira Incoming Webhook (In Progress + Create Linked Bug)
+        uses: actions/github-script@v7
+        env:
+          JIRA_WEBHOOK_URL: ${{ secrets.JIRA_REJECT_WEBHOOK_URL }}
+          JIRA_WEBHOOK_SECRET: ${{ secrets.JIRA_REJECT_WEBHOOK_SECRET }}
+        with:
+          script: |
+            const webhookUrl = process.env.JIRA_WEBHOOK_URL;
+            const webhookSecret = process.env.JIRA_WEBHOOK_SECRET;
+
+            if (!webhookUrl || !webhookSecret) {
+              core.setFailed('❌ Thiếu GitHub Secret JIRA_REJECT_WEBHOOK_URL hoặc JIRA_REJECT_WEBHOOK_SECRET.');
+              return;
+            }
+
+            const pr = context.payload.pull_request;
+            const review = context.payload.review;
+            const headBranch = pr.head.ref || '';
+            const prTitle = pr.title || '';
+
+            // Trích xuất mã Jira MC-<số> từ tên nhánh (hỗ trợ cả nhánh tự sinh từ Jira) và tiêu đề PR
+            const keyRegex = /(?<![A-Za-z0-9])MC-[0-9]+(?![0-9])/g;
+            const matched = [
+              ...(headBranch.match(keyRegex) || []),
+              ...(prTitle.match(keyRegex) || []),
+            ];
+            const issues = [...new Set(matched)];
+
+            if (issues.length === 0) {
+              core.info(`ℹ️ Không tìm thấy mã Jira MC-xx trong nhánh "${headBranch}" hoặc tiêu đề "${prTitle}". Bỏ qua.`);
+              return;
+            }
+
+            const reviewer = (review.user && review.user.login) ? review.user.login : 'Unknown reviewer';
+            const comment = (review.body && review.body.trim())
+              ? review.body.trim()
+              : '(Không có ghi chú chung — xem chi tiết trong các comment dòng code trên PR)';
+
+            const payload = {
+              issues,
+              reviewer,
+              pr_title: prTitle,
+              pr_url: pr.html_url,
+              comment,
+            };
+
+            core.info(`🔄 Gửi tín hiệu Request changes tới Jira cho: ${issues.join(', ')}`);
+
+            const response = await fetch(webhookUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Automation-Webhook-Token': webhookSecret,
+              },
+              body: JSON.stringify(payload),
+            });
+
+            const responseText = await response.text();
+            if (!response.ok) {
+              core.setFailed(`❌ Jira Webhook trả về lỗi HTTP ${response.status}: ${responseText}`);
+              return;
+            }
+
+            core.info(`✅ Đã đồng bộ Jira thành công (HTTP ${response.status}) cho ${issues.join(', ')}!`);

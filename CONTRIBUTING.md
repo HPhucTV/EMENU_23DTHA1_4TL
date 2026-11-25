@@ -33,11 +33,12 @@ Dự án sử dụng **GitFlow rút gọn** kết hợp tự động hóa đồn
 
 ## 3. Tự động hóa trạng thái trên Jira (`MC`)
 
-| Bước thực hiện trên GitHub | Trạng thái task trên Jira `MC` |
+| Bước thực hiện trên GitHub | Trạng thái & Hành động tự động trên Jira `MC` |
 | :--- | :--- |
 | Task nằm trong Sprint chưa làm | **`To Do`** |
 | Tạo nhánh `feature/MC-xx-...` và push lên GitHub | Tự động chuyển → **`In Progress`** |
 | Mở Pull Request vào `develop` | Tự động chuyển → **`In Review`** |
+| Reviewer bấm **Request changes** hoặc **Close PR** (không merge) | Trả `Task` về **`In Progress`** + **tự động tạo 1 `Bug` mới** (cùng Assignee & Sprint) liên kết **`blocks`** vào `Task` gốc *(kèm comment góp ý của reviewer)* |
 | Đồng đội Approve & bấm **Merge PR** | Tự động chuyển → **`Done`** |
 
 ---
