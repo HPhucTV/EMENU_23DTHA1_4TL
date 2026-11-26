@@ -4,6 +4,8 @@ import { CustomerLayout } from './layouts/CustomerLayout';
 import { OperationsLayout } from './layouts/OperationsLayout';
 import { HomePage } from './pages/HomePage';
 import { PlaceholderPage } from './pages/PlaceholderPage';
+import { RegisterPage } from './pages/RegisterPage';
+import { VerifyEmailPage } from './pages/VerifyEmailPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -57,12 +59,14 @@ export function App() {
               path="/login"
               element={
                 <PlaceholderPage
-                  title="Đăng nhập & Đăng ký tài khoản"
-                  storyRef="Sprint 1 • US-04, US-05, US-06"
-                  description="Xác thực bằng Email/SĐT, JWT phân quyền 3 vai trò (Khách hàng, Nhân viên, Quản lý) và khóa tạm 15 phút khi nhập sai quá 5 lần."
+                  title="Đăng nhập tài khoản"
+                  storyRef="Sprint 1 • US-05"
+                  description="Màn hình đăng nhập bằng Email/SĐT kèm khóa tạm 15 phút sau 5 lần sai sẽ triển khai tại US-05. Bạn đã có thể tạo tài khoản mới tại trang Đăng ký (/register)."
                 />
               }
             />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/verify-email" element={<VerifyEmailPage />} />
           </Route>
 
           <Route path="/ops" element={<OperationsLayout />}>

@@ -18,6 +18,18 @@ class Settings(BaseSettings):
 
     jwt_secret_key: str = "changeme"
     jwt_expire_minutes: int = 60
+    frontend_base_url: str = "http://localhost:5173"
+    email_verify_expire_hours: int = 24
+
+    email_provider: str = "console"  # console | smtp | brevo
+    brevo_api_key: str = ""
+    smtp_host: str = "localhost"
+    smtp_port: int = 1025
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_use_tls: bool = False
+    email_from_name: str = "Nhà hàng Ẩm thực Vườn Phố"
+    email_from_address: str = "no-reply@vuonpho.vn"
 
     model_config = SettingsConfigDict(
         env_file=".env",

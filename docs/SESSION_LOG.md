@@ -9,15 +9,15 @@
 | Hạng mục | Trạng thái hiện tại |
 | :--- | :--- |
 | **Sprint hiện tại** | **Sprint 1** *(đang triển khai `EP-01`, hướng tới mốc `M2` ngày `29/11/2026`)* |
-| **Mốc kế tiếp** | **M2: Lưu Baseline MS Project (`29/11/2026`)** + hoàn tất `US-04`..`US-08` |
-| **Tiến độ mã nguồn** | Đã hoàn tất **`US-01` (`MC-11` — đã merge `develop`)** và **`US-02` (`MC-13`)**: lưu `docs/ERD.md` (16 bảng), định nghĩa 13 bảng ORM `core_models.py`, cấu hình Alembic Zero File-Overlap và tạo migration `20261126_0001_core_initial_schema.py` kèm constraint `btree_gist` chống trùng bàn |
+| **Mốc kế tiếp** | **M2: Lưu Baseline MS Project (`29/11/2026`)** + hoàn tất `US-05`..`US-08` |
+| **Tiến độ mã nguồn** | Đã hoàn tất **`US-01` (`MC-11` — merged)**, **`US-02` (`MC-13` — merged)** và **`US-04` (`MC-14`)**: Đăng ký tài khoản khách hàng (`POST /api/v1/auth/register`, `/verify-email`, `/resend-verification`), băm mật khẩu `bcrypt`, chống trùng Email/SĐT chuẩn hóa VN, gửi email xác thực một lần và giao diện `RegisterPage` / `VerifyEmailPage` khớp Figma |
 | **Hồ sơ & Tài liệu** | Đã có `AGENTS.md`, `docs/SYSTEM_SPEC.md`, `docs/ERD.md`, `docs/ROADMAP.md`, `docs/SESSION_LOG.md`, `docs/PAYMENT_EMAIL_SMS_RESEARCH.md` (`MC-69`), Chat Contract (`MC-68`) & bộ ảnh Figma (`PR #10`) |
-| **Quy ước đã chốt** | Jira key **`MC`** (`MC-xx`); nhóm **4 thành viên**; kiến trúc Zero File-Overlap (`alembic upgrade heads` tách nhánh `core` & `ai`); dùng placeholder `changeme` trong `.env.example` / `docker-compose.yml` tránh cảnh báo GitGuardian |
+| **Quy ước đã chốt** | Jira key **`MC`** (`MC-xx`); nhóm **4 thành viên**; kiến trúc Zero File-Overlap; mật khẩu băm `bcrypt` (cost `12`), token xác thực một lần lưu băm `SHA-256` trong `password_reset_tokens` |
 
 ### Cảnh báo kỹ thuật & Blocker cần xử lý ngay
-1. **Môi trường Docker / PostgreSQL trên máy Dev Fullstack**: Máy Windows hiện có sẵn `Node v24.17.0` và `Python 3.14` (`py`), nhưng **chưa cài Docker Desktop hoặc PostgreSQL 16**. Bộ test `pytest` đã kiểm chứng cả chạy thực thi trên CSDL trống lẫn biên dịch SQL chuẩn PostgreSQL (`btree_gist` + `EXCLUDE USING gist`), nhưng nên cài Docker Desktop để chạy PostgreSQL 16 thật.
+1. **Môi trường Docker / PostgreSQL trên máy Dev Fullstack**: Máy Windows hiện có sẵn `Node v24.17.0` và `Python 3.14` (`py`), nhưng **chưa cài Docker Desktop hoặc PostgreSQL 16**. Nên cài Docker Desktop để chạy PostgreSQL 16 + Mailpit local khi kiểm thử tích hợp thực tế.
 2. **Đầu việc kế tiếp trong Sprint 1**:
-   - `[FS]` Mở PR `MC-13` (`US-02`) vào `develop` (cần `>= 1` thành viên review theo AC), sau đó triển khai `US-04` (Đăng ký), `US-05` (Đăng nhập/Đăng xuất + khóa 15p), `US-06` (Quên mật khẩu), `US-07` (RBAC 3 vai trò & tài khoản NV) và `US-08` (CI GitHub Actions).
+   - `[FS]` Mở PR `MC-14` (`US-04`) vào `develop`, sau đó triển khai tiếp `US-05` (Đăng nhập/Đăng xuất bằng Email hoặc SĐT, cấp JWT, điều hướng 3 vai trò, khóa tạm 15 phút sau 5 lần sai), `US-06` (Quên mật khẩu), `US-07` (Phân quyền RBAC & quản lý tài khoản NV) và `US-08` (CI GitHub Actions).
    - `[AI]` Dựng `ai_models.py` + migration nhánh `ai` (`--branch-label ai --head 20261126_0001_core`), benchmark model Ollama.
 
 ---
@@ -41,6 +41,25 @@
 ---
 
 ## Nhật ký các phiên làm việc
+
+### [2026-11-26 16:11 GMT+7] — Antigravity AI + Dev Fullstack (Nguyễn Văn Tiến) | Nhánh: `MC-14-us-04-dang-ky-tai-khoản` | Jira: `MC-14`
+- **Mục tiêu phiên:** Đồng bộ nhánh `MC-14` lên `origin/develop` (sau PR #13) và triển khai trọn vẹn **`[US-04]` Đăng ký tài khoản** (`FR-01`: chống trùng Email/SĐT, băm mật khẩu `bcrypt`, gửi & xác thực email một lần, báo lỗi rõ theo từng trường nhập).
+- **Đã hoàn thành:**
+  - Xây dựng [security.py](../backend/app/core/security.py): băm mật khẩu một chiều bằng `bcrypt` (`rounds=12`) và sinh/băm token một lần bằng `SHA-256`.
+  - Xây dựng [email_service.py](../backend/app/services/email_service.py): hỗ trợ 3 chế độ gửi mail (`console` cho local/test, `smtp`/Mailpit và `brevo` REST API) kèm tự động retry tối đa `3 lần` theo `MC-69`.
+  - Xây dựng [auth_schemas.py](../backend/app/schemas/auth_schemas.py), [auth_service.py](../backend/app/services/auth_service.py), [auth_router.py](../backend/app/api/v1/auth_router.py) và bộ chuẩn hóa lỗi tiếng Việt trong [main.py](../backend/app/main.py): mở `POST /api/v1/auth/register` (`201`/`409`/`422`), `POST /api/v1/auth/verify-email` và `POST /api/v1/auth/resend-verification`; tự động chuẩn hóa SĐT Việt Nam (`+84...` → `0...`) và email thường để ngăn đăng ký trùng.
+  - Xây dựng giao diện [RegisterPage.tsx](../frontend/src/pages/RegisterPage.tsx) và [VerifyEmailPage.tsx](../frontend/src/pages/VerifyEmailPage.tsx) bám sát Figma (`11_dang_ky.png` Desktop & `13_dang_ky_dien_thoai.png` Mobile): nút `Hiện/Ẩn` mật khẩu, validate tức thì trên trình duyệt kết hợp tô đỏ đúng trường lỗi trả về từ API (`field_errors`), gợi ý chuyển sang Đăng nhập khi trùng email.
+  - Viết bộ kiểm thử tự động [test_auth_register.py](../backend/tests/core/test_auth_register.py) & [RegisterPage.test.tsx](../frontend/src/test/RegisterPage.test.tsx); cập nhật [ROADMAP.md](ROADMAP.md).
+- **Quyết định chốt:**
+  - Dùng thư viện `bcrypt` trực tiếp (thay `passlib` không còn tương thích Python 3.13+) và chỉ lưu `SHA-256(token)` vào `password_reset_tokens` (`purpose='email_verify'`, hạn `24h`).
+- **Vấn đề / Blocker:**
+  - Không có blocker.
+- **Kiểm thử đã chạy:**
+  - Back-end `pytest -v`: **`13 passed`** (`4` test `US-01` + `5` test `US-02` + `4` test `US-04`).
+  - Front-end `npm test` (`vitest run`): **`5 passed`** (`2` test `US-01` + `3` test `US-04`); `npm run build` (`tsc -b && vite build`): **thành công (`0` lỗi)**.
+- **Bước tiếp theo:**
+  1. Commit, push nhánh `MC-14-us-04-dang-ky-tai-khoản` và mở PR `[MC-14] [US-04] Triển khai đăng ký tài khoản khách hàng và xác thực email` vào `develop`.
+  2. Triển khai tiếp `US-05` (Đăng nhập & đăng xuất bằng Email/SĐT, JWT có hạn, điều hướng 3 vai trò, khóa tạm 15 phút sau 5 lần sai).
 
 ### [2026-11-26 15:45 GMT+7] — Antigravity AI + Dev Fullstack (Nguyễn Văn Tiến) | Nhánh: `MC-13-us-02-erd-va-migration-csdl` | Jira: `MC-13`
 - **Mục tiêu phiên:** Đồng bộ nhánh `MC-13` với `origin/develop` và triển khai trọn vẹn **`[US-02]` ERD và migration CSDL** (ERD lưu trong repo, Alembic tạo đủ bảng trên CSDL trống, ràng buộc CSDL chống trùng bàn), đồng thời xử lý cảnh báo GitGuardian cho biến môi trường mẫu.
