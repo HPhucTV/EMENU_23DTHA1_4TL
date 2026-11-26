@@ -1,0 +1,44 @@
+# Thiết kế Figma lưu tham khảo trên máy local (không đẩy lên Git)
+figma/
+
+# Biến môi trường nhạy cảm (giữ lại file mẫu .env.example)
+.env
+.env.*
+!.env.example
+
+# Python / FastAPI
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+*.db
+*.sqlite3
+
+# Node / React / Vite
+node_modules/
+dist/
+dist-ssr/
+coverage/
+.vite/
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Hệ điều hành & IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
