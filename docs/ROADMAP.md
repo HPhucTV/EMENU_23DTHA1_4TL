@@ -115,7 +115,7 @@
 | [x] | `US-01` | Khung dự án và kiến trúc | `EP-01` | — | `1.3.3.2` | High | 5 | Dev Fullstack | Cấu trúc thư mục + README cài đặt; `/health` trả `200` + Swagger; BE nối PG, FE gọi API mẫu |
 | [x] | `US-02` | ERD và migration CSDL | `EP-01` | — | `1.3.3.1` | High | 3 | Dev Fullstack | ERD trong repo (`docs/ERD.md`); Alembic tạo đủ 13 bảng Core trên CSDL trống; có constraint chống trùng bàn; `>= 1` review |
 | [ ] | `US-03` | Thiết kế Figma luồng chính | `EP-01` | — | `1.3.2.1` | High | 5 | PO/BA | Prototype trang chủ, thực đơn, đặt bàn, đặt món, cọc, chat, quản lý; dùng tốt mobile; PO duyệt |
-| [ ] | `US-04` | Đăng ký tài khoản | `EP-01` | `FR-01` | `1.3.4.1` | High | 3 | Dev Fullstack | Email/SĐT không trùng; mật khẩu băm; gửi email xác thực; báo lỗi rõ |
+| [x] | `US-04` | Đăng ký tài khoản | `EP-01` | `FR-01` | `1.3.4.1` | High | 3 | Dev Fullstack | Email/SĐT không trùng; mật khẩu băm `bcrypt`; gửi email xác thực 1 lần; báo lỗi rõ từng trường (`MC-14`) |
 | [ ] | `US-05` | Đăng nhập và đăng xuất | `EP-01` | `FR-01` | `1.3.4.1` | High | 3 | Dev Fullstack | Điều hướng theo vai trò; sai `> 5` lần khóa `15p`; JWT có thời hạn; đăng xuất hủy phiên |
 | [ ] | `US-06` | Quên mật khẩu | `EP-01` | `FR-01` | `1.3.4.1` | Med | 2 | Dev Fullstack | Gửi link đặt lại có thời hạn, dùng `1` lần; mật khẩu mới lưu dạng băm |
 | [ ] | `US-07` | Phân quyền và tài khoản nhân viên | `EP-01` | `FR-01` | `1.3.4.2` | High | 5 | Dev Fullstack | 3 vai trò (Khách, NV, QL); ngoài quyền trả `403` + log; QL tạo/khóa/mở khóa tài khoản NV |

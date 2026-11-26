@@ -2,10 +2,12 @@
 
 from fastapi import APIRouter
 
+from app.api.v1.auth_router import router as auth_router
 from app.api.v1.system_router import router as system_router
 
 api_v1_router = APIRouter()
 api_v1_router.include_router(system_router)
+api_v1_router.include_router(auth_router)
 
 # Tự động gắn chat_router khi AI Dev triển khai `backend/app/api/v1/chat_router.py`
 # mà không cần chỉnh sửa file vùng Core của Dev Fullstack (Zero File-Overlap).

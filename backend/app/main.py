@@ -1,12 +1,23 @@
 """Điểm khởi chạy ứng dụng Python FastAPI — Nhà hàng Ẩm thực Vườn Phố (QL09-W)."""
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api.v1.router import api_v1_router
 from app.core.config import get_settings
 from app.schemas.system_schemas import HealthResponse
 from app.services.system_service import build_health_payload
+
+
+def _translate_validation_message(raw_msg: str) -> str:
+    cleaned = raw_msg.removeprefix("Value error, ").strip()
+    if cleaned == "Field required":
+        return "Vui lòng không để trống thông tin bắt buộc này."
+    if cleaned.startswith("String should have at least"):
+        return "Nội dung nhập vào quá ngắn."
+    return cleaned
 
 
 def create_application() -> FastAPI:
@@ -31,6 +42,34 @@ def create_application() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    @application.exception_handler(RequestValidationError)
+    async def validation_exception_handler(
+        _request: Request, exc: RequestValidationError
+    ) -> JSONResponse:
+        field_errors: dict[str, str] = {}
+        for err in exc.errors():
+            loc = [str(part) for part in err.get("loc", ()) if part != "body"]
+            msg = _translate_validation_message(str(err.get("msg", "Dữ liệu không hợp lệ.")))
+            field_name = loc[-1] if loc else (
+                "confirm_password" if "xác nhận" in msg.lower() else "form"
+            )
+            field_errors.setdefault(field_name, msg)
+
+        first_message = next(
+            iter(field_errors.values()),
+            "Vui lòng kiểm tra lại thông tin đã nhập.",
+        )
+        return JSONResponse(
+            status_code=422,
+            content={
+                "detail": {
+                    "code": "VALIDATION_ERROR",
+                    "message": first_message,
+                    "field_errors": field_errors,
+                }
+            },
+        )
 
     @application.get(
         "/health",

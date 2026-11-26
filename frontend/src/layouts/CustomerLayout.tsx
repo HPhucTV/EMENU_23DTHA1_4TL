@@ -59,6 +59,12 @@ export function CustomerLayout() {
               Đăng nhập
             </Link>
             <Link
+              to="/register"
+              className="text-sm font-medium text-brand hover:underline transition-colors"
+            >
+              Đăng ký
+            </Link>
+            <Link
               to="/booking"
               className="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-dark transition-colors"
             >
@@ -98,11 +104,11 @@ export function CustomerLayout() {
                 Đăng nhập
               </Link>
               <Link
-                to="/booking"
+                to="/register"
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex-1 text-center rounded-lg bg-brand py-2 text-sm font-medium text-white"
               >
-                Đặt bàn ngay →
+                Đăng ký →
               </Link>
             </div>
           </div>
