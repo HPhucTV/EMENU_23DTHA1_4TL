@@ -9,16 +9,16 @@
 | Hạng mục | Trạng thái hiện tại |
 | :--- | :--- |
 | **Sprint hiện tại** | **Sprint 1** *(đang triển khai `EP-01`, hướng tới mốc `M2` ngày `29/11/2026`)* |
-| **Mốc kế tiếp** | **M2: Lưu Baseline MS Project (`29/11/2026`)** + hoàn tất `US-02`..`US-08` |
-| **Tiến độ mã nguồn** | Đã hoàn tất **`US-01` (`MC-11`)**: dựng xong `frontend/` (React 18 + Vite + TS + Tailwind), `backend/` (FastAPI + SQLAlchemy 2.0 + Pydantic v2 + `/health` + Swagger `/docs`), `docker-compose.yml` (PostgreSQL 16 + `btree_gist` + `GMT+7`), `.gitignore` & cập nhật `README.md` |
-| **Hồ sơ & Tài liệu** | Bộ 4 file chuẩn hóa (`AGENTS.md`, `docs/SYSTEM_SPEC.md`, `docs/ROADMAP.md`, `docs/SESSION_LOG.md`) + 5 file hồ sơ BA (`MC-66` đã merge) |
-| **Quy ước đã chốt** | Jira key **`MC`** (`MC-xx`); nhóm **4 thành viên** (`PM/SM`, `PO/BA`, `Dev Fullstack`, `AI Dev`); kiến trúc Zero File-Overlap; thư mục thiết kế `figma/` giữ ở local (`.gitignore`) để tham chiếu giao diện |
+| **Mốc kế tiếp** | **M2: Lưu Baseline MS Project (`29/11/2026`)** + hoàn tất `US-04`..`US-08` |
+| **Tiến độ mã nguồn** | Đã hoàn tất **`US-01` (`MC-11` — đã merge `develop`)** và **`US-02` (`MC-13`)**: lưu `docs/ERD.md` (16 bảng), định nghĩa 13 bảng ORM `core_models.py`, cấu hình Alembic Zero File-Overlap và tạo migration `20261126_0001_core_initial_schema.py` kèm constraint `btree_gist` chống trùng bàn |
+| **Hồ sơ & Tài liệu** | Đã có `AGENTS.md`, `docs/SYSTEM_SPEC.md`, `docs/ERD.md`, `docs/ROADMAP.md`, `docs/SESSION_LOG.md`, `docs/PAYMENT_EMAIL_SMS_RESEARCH.md` (`MC-69`), Chat Contract (`MC-68`) & bộ ảnh Figma (`PR #10`) |
+| **Quy ước đã chốt** | Jira key **`MC`** (`MC-xx`); nhóm **4 thành viên**; kiến trúc Zero File-Overlap (`alembic upgrade heads` tách nhánh `core` & `ai`); dùng placeholder `changeme` trong `.env.example` / `docker-compose.yml` tránh cảnh báo GitGuardian |
 
 ### Cảnh báo kỹ thuật & Blocker cần xử lý ngay
-1. **Môi trường Docker / PostgreSQL trên máy Dev Fullstack**: Máy Windows hiện có sẵn `Node v24.17.0` và `Python 3.14` (`py`), nhưng **chưa cài Docker Desktop hoặc PostgreSQL 16**. Cần cài Docker Desktop (khuyên dùng, chạy `docker compose up --build`) hoặc PostgreSQL 16 để chạy migration thật ở `US-02`.
+1. **Môi trường Docker / PostgreSQL trên máy Dev Fullstack**: Máy Windows hiện có sẵn `Node v24.17.0` và `Python 3.14` (`py`), nhưng **chưa cài Docker Desktop hoặc PostgreSQL 16**. Bộ test `pytest` đã kiểm chứng cả chạy thực thi trên CSDL trống lẫn biên dịch SQL chuẩn PostgreSQL (`btree_gist` + `EXCLUDE USING gist`), nhưng nên cài Docker Desktop để chạy PostgreSQL 16 thật.
 2. **Đầu việc kế tiếp trong Sprint 1**:
-   - `[FS]` Mở PR `MC-11` (`US-01`) vào `develop`, sau đó triển khai `US-02` (13 bảng `core_models.py` + Alembic migration + constraint `btree_gist`), `US-04..07` (Auth & RBAC) và `US-08` (CI test workflow); gửi bảng so sánh Sandbox cho PM.
-   - `[AI]` Dựng `ai_models.py` + migration `*_ai_*`, cài Ollama local & benchmark `>= 2` model tiếng Việt.
+   - `[FS]` Mở PR `MC-13` (`US-02`) vào `develop` (cần `>= 1` thành viên review theo AC), sau đó triển khai `US-04` (Đăng ký), `US-05` (Đăng nhập/Đăng xuất + khóa 15p), `US-06` (Quên mật khẩu), `US-07` (RBAC 3 vai trò & tài khoản NV) và `US-08` (CI GitHub Actions).
+   - `[AI]` Dựng `ai_models.py` + migration nhánh `ai` (`--branch-label ai --head 20261126_0001_core`), benchmark model Ollama.
 
 ---
 
@@ -41,6 +41,26 @@
 ---
 
 ## Nhật ký các phiên làm việc
+
+### [2026-11-26 15:45 GMT+7] — Antigravity AI + Dev Fullstack (Nguyễn Văn Tiến) | Nhánh: `MC-13-us-02-erd-va-migration-csdl` | Jira: `MC-13`
+- **Mục tiêu phiên:** Đồng bộ nhánh `MC-13` với `origin/develop` và triển khai trọn vẹn **`[US-02]` ERD và migration CSDL** (ERD lưu trong repo, Alembic tạo đủ bảng trên CSDL trống, ràng buộc CSDL chống trùng bàn), đồng thời xử lý cảnh báo GitGuardian cho biến môi trường mẫu.
+- **Đã hoàn thành:**
+  - Đồng bộ fast-forward `MC-13` lên `origin/develop` (`1fdf3dd`) và khôi phục [README.md](../README.md) bị rỗng sau merge trước đó.
+  - Tạo [docs/ERD.md](ERD.md) lưu sơ đồ Mermaid ERD 16 bảng (13 Core + 3 AI), từ điển ràng buộc toàn vẹn, cơ chế `btree_gist` chống trùng bàn và hướng dẫn vận hành Alembic đa nhánh.
+  - Xây dựng đầy đủ **13 bảng ORM Core** tại [core_models.py](../backend/app/models/core_models.py) (`users`, `password_reset_tokens`, `categories`, `dishes`, `dish_price_history`, `areas`, `tables`, `reservations`, `reservation_items`, `deposit_transactions`, `reservation_audit_logs`, `notifications`, `business_configs`) với `TIMESTAMPTZ`, tiền nguyên `VNĐ`, `ON DELETE RESTRICT` chống xóa món/bàn đã có đơn, `unit_price_locked` và `provider_txn_id` unique chống trùng webhook.
+  - Thiết lập [alembic.ini](../backend/alembic.ini), [alembic/env.py](../backend/alembic/env.py) (tự động nạp `ai_models.py` không cần sửa file Core) và tạo migration khởi tạo [20261126_0001_core_initial_schema.py](../backend/alembic/versions/20261126_0001_core_initial_schema.py) gắn `branch_labels = ("core",)` kèm `CREATE EXTENSION IF NOT EXISTS btree_gist` và `EXCLUDE USING gist` `ex_reservations_no_overlapping_table_slot`.
+  - Thay chuỗi mẫu `emenu_secret` bằng placeholder chuẩn `changeme` trong `.env.example`, `backend/.env.example`, `docker-compose.yml` và loại bỏ mật khẩu mặc định trong `config.py` để không kích hoạt cảnh báo GitGuardian.
+  - Viết bộ kiểm thử [test_migrations_and_models.py](../backend/tests/core/test_migrations_and_models.py) và cập nhật [ROADMAP.md](ROADMAP.md).
+- **Quyết định chốt:**
+  - Dùng `branch_labels = ("core",)` cho chuỗi migration của Dev Fullstack và `alembic upgrade heads` để AI Dev có thể tạo nhánh migration `ai` độc lập 100% (Zero File-Overlap).
+  - Bổ sung trạng thái `need_refund` và `refunded` vào `deposit_transactions.status` khớp báo cáo khảo sát VNPay Sandbox (`MC-69`).
+- **Vấn đề / Blocker:**
+  - Không có blocker về code/test; cần ít nhất `1` thành viên trong nhóm review PR `MC-13` trên GitHub để hoàn tất điều kiện DoD cuối cùng của `US-02`.
+- **Kiểm thử đã chạy:**
+  - Back-end `pytest -v`: **`9 passed`** (`4` test `US-01` + `5` test `US-02`: kiểm tra `docs/ERD.md`, `alembic upgrade heads` & `downgrade base` trên CSDL trống, xuất DDL PostgreSQL kiểm chứng `btree_gist` & `EXCLUDE USING gist`, kiểm chứng chặn trùng khung giờ & giải phóng khi `expired`, kiểm chứng `ON DELETE RESTRICT` & `provider_txn_id` idempotent).
+- **Bước tiếp theo:**
+  1. Commit, push nhánh `MC-13-us-02-erd-va-migration-csdl` và mở PR `[MC-13] [US-02] Thiết kế ERD và khởi tạo Alembic migration 13 bảng Core` vào `develop` (nhờ `>= 1` thành viên review).
+  2. Triển khai tiếp `US-04` (Đăng ký tài khoản) và `US-05` (Đăng nhập/Đăng xuất + JWT + khóa 15p).
 
 ### [2026-11-26 14:55 GMT+7] — Antigravity AI + Dev Fullstack (Nguyễn Văn Tiến) | Nhánh: `MC-11-us-01-khung-dự-an-va-kiến-truc` | Jira: `MC-11`
 - **Mục tiêu phiên:** Rà soát bộ 13 màn hình thiết kế Figma mới, tổng hợp lộ trình công việc của Dev Fullstack và triển khai trọn vẹn **`[US-01]` Khung dự án và kiến trúc** (`MC-11`, kiêm hoàn tất skeleton Sprint 0 `1.1.3.2`).

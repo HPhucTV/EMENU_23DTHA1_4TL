@@ -100,7 +100,7 @@
 | [x] | `[PM]` Khởi tạo Jira, MS Project, Kick-off & Bộ tài liệu D01/D14/D17 (`1.1.1.1–2`) | PM/SM | Jira, MS Project, `docs/` | Tạo xong 10 Epic, mời GV vào Jira, chốt RACI & quy ước 4 người |
 | [x] | `[BA]` Khảo sát nhà hàng, hoàn thiện SRS/Backlog & gom dữ liệu thô (`1.1.2.1–3`) | PO/BA | `docs/` | Có biên bản khảo sát, chốt SRS v1.1, có menu/bàn/chính sách thô |
 | [x] | `[FS]` Khởi tạo Repo GitHub, branch rules & skeleton ReactJS + FastAPI + PG (`1.1.3.1–2`) | Dev Fullstack | `frontend/`, `backend/app/core/`, `docker-compose.yml` | Đã hoàn tất repo, GitFlow, CI PR check và skeleton FE + BE + PG16 (`MC-11`) |
-| [ ] | `[FS]` Khảo sát cổng thanh toán Sandbox (VNPay/MoMo/PayOS) & Email/SMS (`1.1.3.3`) | Dev Fullstack | Nghiên cứu (không sửa code) | Bảng so sánh sandbox, phí & phương án gửi mail đề xuất cho PM đầu S1 |
+| [x] | `[FS]` Khảo sát cổng thanh toán Sandbox (VNPay/MoMo/PayOS) & Email/SMS (`1.1.3.3`) | Dev Fullstack | `docs/PAYMENT_EMAIL_SMS_RESEARCH.md` | Đã hoàn tất bảng so sánh & đề xuất VNPay Sandbox + Brevo + SpeedSMS (`MC-69`) |
 | [ ] | `[AI]` Cài đặt Ollama local, kéo thử model VN & chốt Chat API JSON Contract (`1.1.4.1–2`) | AI Dev | `ollama/`, `docs/SYSTEM_SPEC.md` | Ollama chạy ổn định `>= 2` model; 2 Dev chốt xong JSON `/api/v1/chat/messages` |
 
 ---
@@ -113,7 +113,7 @@
 | Done | US | Tên User Story | Epic | FR | WBS | Prio | SP | Assignee | Tiêu chí chấp nhận cốt lõi (AC) |
 | :---: | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :--- | :--- |
 | [x] | `US-01` | Khung dự án và kiến trúc | `EP-01` | — | `1.3.3.2` | High | 5 | Dev Fullstack | Cấu trúc thư mục + README cài đặt; `/health` trả `200` + Swagger; BE nối PG, FE gọi API mẫu |
-| [ ] | `US-02` | ERD và migration CSDL | `EP-01` | — | `1.3.3.1` | High | 3 | Dev Fullstack | ERD trong repo; Alembic tạo đủ bảng trên CSDL trống; có constraint chống trùng bàn; `>= 1` review |
+| [x] | `US-02` | ERD và migration CSDL | `EP-01` | — | `1.3.3.1` | High | 3 | Dev Fullstack | ERD trong repo (`docs/ERD.md`); Alembic tạo đủ 13 bảng Core trên CSDL trống; có constraint chống trùng bàn; `>= 1` review |
 | [ ] | `US-03` | Thiết kế Figma luồng chính | `EP-01` | — | `1.3.2.1` | High | 5 | PO/BA | Prototype trang chủ, thực đơn, đặt bàn, đặt món, cọc, chat, quản lý; dùng tốt mobile; PO duyệt |
 | [ ] | `US-04` | Đăng ký tài khoản | `EP-01` | `FR-01` | `1.3.4.1` | High | 3 | Dev Fullstack | Email/SĐT không trùng; mật khẩu băm; gửi email xác thực; báo lỗi rõ |
 | [ ] | `US-05` | Đăng nhập và đăng xuất | `EP-01` | `FR-01` | `1.3.4.1` | High | 3 | Dev Fullstack | Điều hướng theo vai trò; sai `> 5` lần khóa `15p`; JWT có thời hạn; đăng xuất hủy phiên |
