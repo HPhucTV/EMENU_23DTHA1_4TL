@@ -10,7 +10,7 @@
 | Phạm vi thực hiện | `[Nghiên cứu] Không sửa code` — Cung cấp bảng so sánh và phương án đề xuất cho PM chốt đầu Sprint 1 (`MC-70`) |
 | Người lập | Nguyễn Văn Tiến (`Dev Fullstack`) |
 | Người phê duyệt | Trần Hoàng Phúc (`PM/SM`) • Phối hợp rà soát: Võ Đăng Khoa (`PO/BA`) |
-| Ngày lập & Trạng thái | 25/11/2026 — Chờ PM/SM chốt phương án đầu Sprint 1 |
+| Ngày lập & Trạng thái | 25/11/2026 — **Đã phê duyệt chốt phương án tại `MC-70` (26/11/2026)** |
 
 ---
 
@@ -237,7 +237,7 @@ SMS_SENDER=
 
 ### 5.3 Checklist hành động đầu Sprint 1 (cho PM/SM `MC-70` & Dev Fullstack)
 
-- [ ] **PM/SM (`MC-70`):** Ký chốt lựa chọn **VNPay Sandbox** (chính) + **MoMo Sandbox** (dự phòng), **Brevo + Mailpit** (Email), và **SpeedSMS/eSMS gói ≤ 200k** (SMS) ngay đầu Sprint 1.
+- [x] **PM/SM (`MC-70`):** Ký chốt lựa chọn **VNPay Sandbox** (chính) + **MoMo Sandbox** (dự phòng), **Brevo + Mailpit** (Email), và **SpeedSMS/eSMS gói ≤ 200k** (SMS) ngay đầu Sprint 1 *(đã phê duyệt ngày 26/11/2026)*.
 - [ ] **Dev Fullstack:** Đăng ký tài khoản **VNPay Sandbox** tại `https://sandbox.vnpayment.vn/devreg/` và lưu `TMN_CODE` + `HASH_SECRET` vào kênh bảo mật nhóm (không commit lên GitHub).
 - [ ] **Dev Fullstack:** Đăng ký tài khoản **Brevo Free** và tài khoản thử nghiệm **SpeedSMS / eSMS** trước Sprint 4 (`WBS 1.9.3.3`).
 - [ ] **Dev Fullstack + PM/SM:** Đảm bảo URL Staging có HTTPS (Sprint 4) để VNPay Sandbox gọi được `VNPAY_IPN_URL` công khai (dùng Ngrok/Cloudflare Tunnel khi kiểm thử ở Local).
@@ -247,8 +247,7 @@ SMS_SENDER=
 ## 6. Phê duyệt Chốt Phương án (Đầu Sprint 1)
 
 | Vai trò | Họ và tên | Quyết định | Ngày chốt |
-|
-| --- | --- | --- | --- |
-| Người khảo sát – Lập trình viên Fullstack (`Dev Fullstack`) | Nguyễn Văn Tiến | Đề xuất phương án | 25/11/2026 |
-| Chủ sản phẩm / Phân tích nghiệp vụ (`PO/BA`) | Võ Đăng Khoa | Đồng thuận nghiệp vụ FR-07, FR-09, FR-10 | …/11/2026 |
-| Quản lý dự án / Scrum Master (`PM/SM`) | Trần Hoàng Phúc | Phê duyệt chốt Sandbox & Email/SMS (`MC-70`) | …/11/2026 
+| :--- | :--- | :--- | :---: |
+| Người khảo sát – Lập trình viên Fullstack (`Dev Fullstack`) | Nguyễn Văn Tiến | Đề xuất phương án | `25/11/2026` |
+| Chủ sản phẩm / Phân tích nghiệp vụ (`PO/BA`) | Võ Đăng Khoa | Đồng thuận nghiệp vụ `FR-07`, `FR-09`, `FR-10` | `26/11/2026` |
+| Quản lý dự án / Scrum Master (`PM/SM`) | Trần Hoàng Phúc | **Đã phê duyệt** chốt **VNPay Sandbox** (chính) + **MoMo Sandbox** (dự phòng), **Brevo + Mailpit** (Email), **SpeedSMS/eSMS gói <= 200.000 VNĐ** (`SMS_ENABLED`) tại **`MC-70`** | `26/11/2026` |
