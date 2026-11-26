@@ -13,12 +13,10 @@ class Settings(BaseSettings):
     timezone: str = "Asia/Ho_Chi_Minh"
     currency: str = "VND"
 
-    database_url: str = (
-        "postgresql+psycopg://emenu_user:emenu_secret@localhost:5432/emenu_db"
-    )
+    database_url: str = "postgresql+psycopg://emenu_user@localhost:5432/emenu_db"
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
 
-    jwt_secret_key: str = "change-this-secret-in-production"
+    jwt_secret_key: str = "changeme"
     jwt_expire_minutes: int = 60
 
     model_config = SettingsConfigDict(

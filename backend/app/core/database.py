@@ -47,6 +47,14 @@ def build_engine(database_url: str) -> Engine:
             with dbapi_connection.cursor() as cursor:
                 cursor.execute("SET TIME ZONE 'Asia/Ho_Chi_Minh'")
 
+    elif db_engine.dialect.name == "sqlite":
+
+        @event.listens_for(db_engine, "connect")
+        def _enable_sqlite_foreign_keys(dbapi_connection: Any, _: Any) -> None:
+            cursor = dbapi_connection.cursor()
+            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.close()
+
     return db_engine
 
 
