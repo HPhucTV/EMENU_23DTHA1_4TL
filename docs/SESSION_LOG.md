@@ -4,21 +4,21 @@
 
 ---
 
-## Current Snapshot (Cập nhật: 26/11/2026 — `GMT+7`)
+## Current Snapshot (Cập nhật: 27/11/2026 — `GMT+7`)
 
 | Hạng mục | Trạng thái hiện tại |
 | :--- | :--- |
 | **Sprint hiện tại** | **Sprint 1** *(đang triển khai `EP-01`, hướng tới mốc `M2` ngày `29/11/2026`)* |
-| **Mốc kế tiếp** | **M2: Lưu Baseline MS Project (`29/11/2026`)** + hoàn tất `US-05`..`US-08` |
-| **Tiến độ mã nguồn** | Đã hoàn tất **`US-01` (`MC-11` — merged)**, **`US-02` (`MC-13` — merged)** và **`US-04` (`MC-14`)**: Đăng ký tài khoản khách hàng (`POST /api/v1/auth/register`, `/verify-email`, `/resend-verification`), băm mật khẩu `bcrypt`, chống trùng Email/SĐT chuẩn hóa VN, gửi email xác thực một lần và giao diện `RegisterPage` / `VerifyEmailPage` khớp Figma |
-| **Hồ sơ & Tài liệu** | Đã có `AGENTS.md`, `docs/SYSTEM_SPEC.md`, `docs/ERD.md`, `docs/ROADMAP.md`, `docs/SESSION_LOG.md`, `docs/PAYMENT_EMAIL_SMS_RESEARCH.md` (`MC-69`), Chat Contract (`MC-68`) & bộ ảnh Figma (`PR #10`) |
-| **Quy ước đã chốt** | Jira key **`MC`** (`MC-xx`); nhóm **4 thành viên**; kiến trúc Zero File-Overlap; mật khẩu băm `bcrypt` (cost `12`), token xác thực một lần lưu băm `SHA-256` trong `password_reset_tokens` |
+| **Mốc kế tiếp** | Hoàn tất kiểm chứng **`M2: Lưu Baseline MS Project (29/11/2026)`** (nộp `.mpp` + ảnh chụp) & hoàn tất `US-05`..`US-08`, benchmark Ollama |
+| **Tiến độ mã nguồn** | Đã hoàn tất **`US-01` (`MC-11` — merged)**, **`US-02` (`MC-13` — merged)**, **`US-04` (`MC-14` — merged)**, **`MC-70` (Baseline M2, DoR/DoD v1.0, Risk Register v1.0, chốt Sandbox — merged)** và **`[AI]` `ai_models.py` + Alembic migration nhánh `ai` (`1.3.5.1` — đủ `16/16` bảng CSDL)** |
+| **Hồ sơ & Tài liệu** | Đã có `AGENTS.md`, `docs/SYSTEM_SPEC.md`, `docs/ERD.md`, `docs/ROADMAP.md`, `docs/SESSION_LOG.md`, `docs/MS_PROJECT_BASELINE_M2.xml`, `docs/BASELINE_M2_REPORT.md`, `docs/DOR_DOD_QUALITY.md`, `docs/RISK_REGISTER.md`, `docs/PAYMENT_EMAIL_SMS_RESEARCH.md` (`MC-69`/`MC-70`), Chat Contract (`MC-68`) & bộ ảnh Figma (`PR #10`) |
+| **Quy ước đã chốt** | Jira key **`MC`** (`MC-xx`); nhóm **4 thành viên**; kiến trúc Zero File-Overlap; mật khẩu băm `bcrypt` (cost `12`), token lưu `SHA-256`; **chốt VNPay Sandbox (chính) + MoMo Sandbox (dự phòng), Brevo + Mailpit (Email), SpeedSMS/eSMS `<= 200k` (`SMS_ENABLED`)** |
 
 ### Cảnh báo kỹ thuật & Blocker cần xử lý ngay
-1. **Môi trường Docker / PostgreSQL trên máy Dev Fullstack**: Máy Windows hiện có sẵn `Node v24.17.0` và `Python 3.14` (`py`), nhưng **chưa cài Docker Desktop hoặc PostgreSQL 16**. Nên cài Docker Desktop để chạy PostgreSQL 16 + Mailpit local khi kiểm thử tích hợp thực tế.
+1. **Môi trường Docker / PostgreSQL trên máy local**: Máy Windows hiện có sẵn `Node` và `Python 3.13.9` (đã dựng `backend/.venv`), nhưng Docker daemon / PostgreSQL 16 local chưa chạy khi kiểm thử. Khi đẩy lên GitHub/Staging, chạy `alembic upgrade heads` trên PostgreSQL 16 để kiểm chứng tích hợp thực tế.
 2. **Đầu việc kế tiếp trong Sprint 1**:
-   - `[FS]` Mở PR `MC-14` (`US-04`) vào `develop`, sau đó triển khai tiếp `US-05` (Đăng nhập/Đăng xuất bằng Email hoặc SĐT, cấp JWT, điều hướng 3 vai trò, khóa tạm 15 phút sau 5 lần sai), `US-06` (Quên mật khẩu), `US-07` (Phân quyền RBAC & quản lý tài khoản NV) và `US-08` (CI GitHub Actions).
-   - `[AI]` Dựng `ai_models.py` + migration nhánh `ai` (`--branch-label ai --head 20261126_0001_core`), benchmark model Ollama.
+   - `[FS]` Triển khai tiếp `US-05` (Đăng nhập/Đăng xuất bằng Email hoặc SĐT, cấp JWT, điều hướng 3 vai trò, khóa tạm 15 phút sau 5 lần sai), `US-06` (Quên mật khẩu), `US-07` (Phân quyền RBAC & quản lý tài khoản NV) và `US-08` (CI GitHub Actions).
+   - `[AI]` Push nhánh & mở PR cho task tạo `ai_models.py` & migration AI (`1.3.5.1`), sau đó benchmark `>= 2` model Ollama trên `>= 10` câu tiếng Việt & dựng `OllamaClient` + `/api/v1/chat/health` (`1.3.5.2`).
 
 ---
 
@@ -41,6 +41,46 @@
 ---
 
 ## Nhật ký các phiên làm việc
+
+### [2026-11-27 17:45 GMT+7] — Antigravity AI + AI Dev (Nguyễn Đoàn Trường Vũ) | WBS: `1.3.5.1`
+- **Mục tiêu phiên:** Tạo `backend/app/models/ai_models.py` (`knowledge_docs`, `chat_sessions`, `chat_messages`) và Alembic migration nhánh `ai`, tuân thủ tuyệt đối Zero File-Overlap (không sửa `core_models.py` hay `alembic/env.py`).
+- **Đã hoàn thành:**
+  - Thiết lập môi trường ảo `backend/.venv` và cài đặt đầy đủ phụ thuộc từ [requirements.txt](../backend/requirements.txt).
+  - Tạo [ai_models.py](../backend/app/models/ai_models.py) định nghĩa 3 bảng ORM SQLAlchemy 2.0: `KnowledgeDoc` (`knowledge_docs`), `ChatSession` (`chat_sessions` dùng `Uuid(as_uuid=True)`, hạn mặc định `90 ngày` theo `GMT+7`) và `ChatMessage` (`chat_messages` với `masked_content`, `response_meta_json`, `feedback`, `is_fallback`, `latency_ms`), dùng quan hệ một chiều tới `User` để không chạm vào `core_models.py`.
+  - Tạo [20261127_0001_ai_initial_tables.py](../backend/alembic/versions/20261127_0001_ai_initial_tables.py) (`branch_labels = ("ai",)`, `down_revision = None`, `depends_on = ("20261126_0001_core",)`) tách nhánh `ai` độc lập khỏi nhánh `core` nhưng đảm bảo thứ tự tạo/xóa phụ thuộc `users.id`.
+  - Tạo bộ kiểm thử [test_ai_models_and_migration.py](../backend/tests/ai/test_ai_models_and_migration.py) kiểm chứng `alembic upgrade heads` / `downgrade base` đủ 16 bảng, DDL PostgreSQL (`UUID`, `TIMESTAMPTZ`, `ON DELETE SET NULL`/`CASCADE`, `CheckConstraint`), CRUD & toàn vẹn dữ liệu, và Zero File-Overlap.
+  - Cập nhật trạng thái hoàn thành WBS `1.3.5.1` trong [ROADMAP.md](ROADMAP.md) và ghi nhật ký tại [SESSION_LOG.md](SESSION_LOG.md).
+- **Quyết định chốt:**
+  - Dùng `down_revision = None` + `depends_on = ("20261126_0001_core",)` kèm `branch_labels = ("ai",)` để `core@head` và `ai@head` hoàn toàn độc lập khi `Dev Fullstack` và `AI Dev` tạo migration song song, đồng thời `alembic upgrade heads` vẫn chạy đúng thứ tự `core` trước `ai`.
+- **Vấn đề / Blocker:**
+  - Không có blocker; Docker daemon chưa bật trên máy local nên kiểm thử SQLite online + xuất DDL PostgreSQL offline (`alembic upgrade heads --sql`).
+- **Kiểm thử đã chạy:**
+  - Back-end `pytest -v`: toàn bộ test `tests/core/` và `tests/ai/` đạt.
+  - `alembic heads` hiển thị 2 head độc lập (`20261126_0001_core (core)` và `20261127_0001_ai (ai)`).
+- **Bước tiếp theo:**
+  1. AI Dev tự tạo nhánh theo quy ước Jira `MC-<số>` từ `develop`, commit và push lên GitHub để mở PR vào `develop`.
+  2. Triển khai tiếp task `1.3.5.2`: Benchmark `>= 2` model Ollama trên `>= 10` câu tiếng Việt & dựng `OllamaClient` + `/api/v1/chat/health`.
+
+### [2026-11-26 18:25 GMT+7] — Antigravity AI + PM/SM (Trần Hoàng Phúc) | Nhánh: `MC-70-pm-lưu-baseline-ms-project-m-2-lập-do-r-do-d-sổ-rủi-ro-va-chốt-sandbox` | Jira: `MC-70`
+- **Mục tiêu phiên:** Giải thích nhiệm vụ `MC-70` cho PM/SM và hoàn tất toàn bộ 4 đầu ra của `MC-70` (Baseline MS Project `M2`, bộ tiêu chí `DoR/DoD v1.0`, `Sổ rủi ro v1.0`, phê duyệt chốt cổng thanh toán Sandbox + Email/SMS theo đề xuất của Dev Fullstack ở `MC-69`).
+- **Đã hoàn thành:**
+  - Trích xuất 100% bảng WBS (`164` dòng, `640` giờ công, `BAC = 63.625.000 VNĐ`), `4` tài nguyên (`50%` Max Units) và `105` phân công từ [WBS 56 ngày](references/WBS_QL09-W_Website_Dat_Ban_Nha_Hang_Chatbot_AI_56Ngay.xlsx) sang tệp chuẩn Microsoft Project XML [MS_PROJECT_BASELINE_M2.xml](MS_PROJECT_BASELINE_M2.xml) đã nhúng sẵn `<Baseline><Number>0</Number>...</Baseline>` trên mọi Task, Resource và Assignment.
+  - Tạo [BASELINE_M2_REPORT.md](BASELINE_M2_REPORT.md) tổng hợp 3 đường cơ sở Phạm vi – Tiến độ – Chi phí (`BAC = 63.625.000 VNĐ`, Dự phòng `6.362.500 VNĐ`, tổng `69.987.500 VNĐ`), bảng `PV` lũy kế EVM Sprint 0–7 và hướng dẫn mở `.xml` lưu `.mpp` trong MS Project.
+  - Ban hành [DOR_DOD_QUALITY.md](DOR_DOD_QUALITY.md) (`DoR/DoD v1.0` ở 3 cấp Story/Sprint/Release, checklist Luật thép kỹ thuật, lịch Scrum `WBS 1.3.1.2` và quy trình `CR/CCB` sau mốc `M2`).
+  - Lập [RISK_REGISTER.md](RISK_REGISTER.md) (`v1.0`) với ma trận đánh giá `5 × 5` và `12` rủi ro chi tiết (`R01`–`R12`), gắn người phụ trách và phương án ứng phó.
+  - Cập nhật [PAYMENT_EMAIL_SMS_RESEARCH.md](PAYMENT_EMAIL_SMS_RESEARCH.md) ghi nhận quyết định phê duyệt chính thức ngày `26/11/2026` của PM/SM (`MC-70`) đối với đề xuất của Dev Fullstack (`VNPay Sandbox` chính, `MoMo Sandbox` dự phòng, `Brevo + Mailpit` Email, `SpeedSMS/eSMS <= 200.000 VNĐ` bật qua `SMS_ENABLED`).
+  - Cập nhật đồng bộ trạng thái mốc `M2` và tick `[x]` task `MC-70` trong [ROADMAP.md](ROADMAP.md).
+- **Quyết định chốt:**
+  - Chốt **VNPay Sandbox** (chính) + **MoMo Sandbox** (dự phòng); **Brevo Free + Mailpit** (Email); **SpeedSMS/eSMS gói `<= 200.000 VNĐ`** (`SMS_ENABLED`) cho nhắc lịch `2h`.
+  - Khóa Baseline `M2` (`56 ngày`, `640h`, `45 US MVP = 202 SP`, `BAC = 63.625.000 VNĐ`); mọi thay đổi sau `29/11/2026` đi qua quy trình `CR/CCB`.
+- **Vấn đề / Blocker:**
+  - Máy hiện tại chưa cài đặt `Microsoft Project` (`WINPROJ.EXE`), vì vậy đã xuất sẵn định dạng chuẩn `.xml` MSPDI kèm Baseline `0` để PM mở bằng Microsoft Project trên máy cá nhân/trường và `Save As .mpp` đính kèm ảnh chụp lên Jira `MC-70`.
+- **Kiểm thử đã chạy:**
+  - Kiểm tra tự động parse XML `MS_PROJECT_BASELINE_M2.xml` (`164` Task, `640h`, `BAC = 63.625.000 VNĐ`, `4` Resource, `105` Assignment có đủ `Baseline 0`), kiểm tra liên kết Markdown nội bộ, quy chuẩn nhánh PR `MC` và `git status` chỉ trong `docs/`.
+- **Bước tiếp theo:**
+  1. PM push nhánh `MC-70-...` lên GitHub và mở Pull Request `[MC-70] [PM] Lưu Baseline MS Project (M2), lập DoR/DoD, Sổ rủi ro và chốt Sandbox` vào `develop`.
+  2. Mở [MS_PROJECT_BASELINE_M2.xml](MS_PROJECT_BASELINE_M2.xml) bằng Microsoft Project → `Save As .mpp` và chụp ảnh Tracking Gantt / Resource Sheet đính kèm vào Jira `MC-70`.
+  3. Theo dõi `Dev Fullstack` (`US-05`..`US-08`), `PO/BA` (`US-03`) và `AI Dev` (`ai_models.py`, benchmark Ollama) hoàn thành Sprint 1 trước mốc `M2 (29/11/2026)`.
 
 ### [2026-11-26 16:11 GMT+7] — Antigravity AI + Dev Fullstack (Nguyễn Văn Tiến) | Nhánh: `MC-14-us-04-dang-ky-tai-khoản` | Jira: `MC-14`
 - **Mục tiêu phiên:** Đồng bộ nhánh `MC-14` lên `origin/develop` (sau PR #13) và triển khai trọn vẹn **`[US-04]` Đăng ký tài khoản** (`FR-01`: chống trùng Email/SĐT, băm mật khẩu `bcrypt`, gửi & xác thực email một lần, báo lỗi rõ theo từng trường nhập).

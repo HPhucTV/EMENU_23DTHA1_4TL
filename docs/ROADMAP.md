@@ -60,7 +60,7 @@
 | Mốc | WBS | Thời điểm | Git Tag | Điều kiện đạt (Exit Criteria) | Người xác nhận | Trạng thái |
 | :---: | :---: | :---: | :---: | :--- | :--- | :--- |
 | **M1** | `1.2` | `22/11/2026` | — | Tôn chỉ (D01), SRS v1.1, Backlog đầu được duyệt; GitHub, Jira (`MC`), MS Project đã lập & mời GV | Nhà tài trợ (GV) | **Đang hoàn tất** |
-| **M2** | `1.4` | `29/11/2026` | — | Phát biểu phạm vi (D02), WBS 640h, Gantt/PERT, dự toán 69.987.500đ duyệt; lưu Baseline MS Project; CI xanh | Nhà tài trợ, PO/BA | Chưa bắt đầu |
+| **M2** | `1.4` | `29/11/2026` | — | Phát biểu phạm vi (D02), WBS 640h, Gantt/PERT, dự toán 69.987.500đ duyệt; lưu Baseline MS Project; CI xanh | Nhà tài trợ, PO/BA | Đang hoàn tất (Đã lập Baseline) |
 | *Demo S2* | `1.6` | `06/12/2026` | — | Demo thực đơn, sơ đồ bàn kéo thả với dữ liệu mẫu ẩn danh; ký duyệt phương án Ollama & lõi RAG | PO/BA, Nhà hàng | Chưa bắt đầu |
 | **M3** | `1.8` | `13/12/2026` | `v0.1` | RBAC 3 vai trò, thực đơn, sơ đồ bàn, đặt bàn chống trùng (Concurrent Test đạt) & giỏ món chạy ổn định | PO/BA, Nhà hàng | Chưa bắt đầu |
 | *Demo S4* | `1.10` | `20/12/2026` | — | Demo đặt bàn, đặt món, cọc Sandbox, hủy/hoàn cọc & Email xác nhận trên Staging; cập nhật EVM | PO/BA, Nhà hàng | Chưa bắt đầu |
@@ -122,8 +122,8 @@
 | [ ] | `US-08` | CI bằng GitHub Actions | `EP-01` | — | `1.3.3.3` | Med | 2 | Dev Fullstack | PR kích hoạt build & test; hiển thị kết quả trên PR; lỗi build chặn merge `main` |
 
 **Task song song Sprint 1:**
-- [ ] `[PM]` Lưu Baseline MS Project (`M2`), lập DoR/DoD, Sổ rủi ro v1.0 và chốt Sandbox (`1.3.1.1–2`) — *PM/SM*
-- [ ] `[AI]` Tạo `ai_models.py` (`knowledge_docs`, `chat_sessions`, `chat_messages`) & migration `alembic/*_ai_*`, không sửa `core_models.py` (`1.3.5.1`) — *AI Dev*
+- [x] `[PM]` Lưu Baseline MS Project (`M2`), lập DoR/DoD, Sổ rủi ro v1.0 và chốt Sandbox (`1.3.1.1–2`, `MC-70`) — *PM/SM* *(tệp [MS_PROJECT_BASELINE_M2.xml](MS_PROJECT_BASELINE_M2.xml), [BASELINE_M2_REPORT.md](BASELINE_M2_REPORT.md), [DOR_DOD_QUALITY.md](DOR_DOD_QUALITY.md), [RISK_REGISTER.md](RISK_REGISTER.md), [PAYMENT_EMAIL_SMS_RESEARCH.md](PAYMENT_EMAIL_SMS_RESEARCH.md))*
+- [x] `[AI]` Tạo `ai_models.py` (`knowledge_docs`, `chat_sessions`, `chat_messages`) & migration `alembic/*_ai_*`, không sửa `core_models.py` (`1.3.5.1`) — *AI Dev* *(tệp [ai_models.py](../backend/app/models/ai_models.py), [20261127_0001_ai_initial_tables.py](../backend/alembic/versions/20261127_0001_ai_initial_tables.py))*
 - [ ] `[AI]` Benchmark `>= 2` model Ollama trên `>= 10` câu tiếng Việt & dựng `OllamaClient` + `/api/v1/chat/health` (`1.3.5.2`) — *AI Dev*
 
 ---
@@ -294,13 +294,14 @@
 | **Sprint Retrospective** | Sau Review | `<= 45 phút` | PM/SM điều phối; cả nhóm rút kinh nghiệm | Hành động cải tiến trên Jira |
 
 ### 6.2 Quy trình Jira `MC`, DoR, DoD & Kiểm soát thay đổi (CR/CCB)
+*(Tài liệu chi tiết ban hành tại [DOR_DOD_QUALITY.md](DOR_DOD_QUALITY.md), báo cáo đường cơ sở tại [BASELINE_M2_REPORT.md](BASELINE_M2_REPORT.md) & [MS_PROJECT_BASELINE_M2.xml](MS_PROJECT_BASELINE_M2.xml), chốt cổng thanh toán tại [PAYMENT_EMAIL_SMS_RESEARCH.md](PAYMENT_EMAIL_SMS_RESEARCH.md).)*
 - **Board Jira `MC`**: 5 cột `To Do → In Progress → In Review → In Testing → Done`. Ánh xạ ưu tiên: `Must = High`, `Should = Medium`, `Could = Low`.
 - **Tự động hóa GitHub ↔ Jira**: Tạo nhánh `<type>/MC-xx-...` → `In Progress`; mở PR vào `develop` → `In Review`; Merge PR → `Done`.
 - **Definition of Ready (DoR)**: Story đủ câu User Story + Acceptance Criteria kiểm thử được; đã ước lượng SP (`1, 2, 3, 5, 8, 13`); xác định phụ thuộc; có Figma (nếu có UI); được PO duyệt.
-- **Definition of Done (DoD)**: Đủ 5 điều kiện tại mục 8.3 của [SYSTEM_SPEC.md](SYSTEM_SPEC.md).
+- **Definition of Done (DoD)**: Đủ 5 điều kiện tại mục 8.3 của [SYSTEM_SPEC.md](SYSTEM_SPEC.md) và checklist tại [DOR_DOD_QUALITY.md](DOR_DOD_QUALITY.md).
 - **Quy trình CR & CCB (sau mốc Baseline `M2 – 29/11/2026`)**: Mọi thay đổi phạm vi phải lập issue CR → PO/BA & PM/SM đánh giá tác động (phạm vi, tiến độ, chi phí) → Hội đồng CCB (PM/SM, PO/BA, Dev Fullstack, AI Dev; xin duyệt GVHD nếu thay đổi lớn) phê duyệt trước khi đưa vào Sprint kế tiếp.
 
-### 6.3 Sổ rủi ro cốt lõi (Rà soát hằng tuần)
+### 6.3 Sổ rủi ro cốt lõi (Rà soát hằng tuần — chi tiết 12 rủi ro `R01–R12` tại [RISK_REGISTER.md](RISK_REGISTER.md))
 | Mã | Rủi ro | Kiểm soát & Ứng phó |
 | :--- | :--- | :--- |
 | `R1` | Khách đặt nhưng không đến (`No-show`) | Bắt buộc cọc `30%`, nhắc lịch `24h`/`2h`, hoàn cọc theo mốc, theo dõi báo cáo `FR-12` |
