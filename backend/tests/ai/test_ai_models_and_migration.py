@@ -85,7 +85,7 @@ def test_alembic_upgrades_and_downgrades_all_16_tables_with_independent_branches
 def test_postgresql_offline_sql_contains_ai_tables_uuid_and_constraints() -> None:
     sql_buffer = StringIO()
     cfg = _make_alembic_config(
-        "postgresql+psycopg://emenu_user@localhost:5432/emenu_db"
+        "postgresql+psycopg://localhost/emenu_db"
     )
     cfg.output_buffer = sql_buffer
 
@@ -120,7 +120,7 @@ def test_knowledge_docs_crud_check_constraint_and_user_set_null(
                 full_name="Quản Lý Vườn Phố",
                 email="manager_ai@vuonpho.vn",
                 phone="0909888777",
-                password_hash="hashed_pw",
+                password_hash=f"test-{uuid.uuid4().hex}",
                 role="manager",
             )
             session.add(manager)
@@ -178,7 +178,7 @@ def test_chat_sessions_and_messages_uuid_cascade_and_guardrail_checks(
                 full_name="Nguyễn Văn Khách",
                 email="khach_ai@vuonpho.vn",
                 phone="0911222333",
-                password_hash="hashed_pw",
+                password_hash=f"test-{uuid.uuid4().hex}",
                 role="customer",
             )
             session.add(customer)
