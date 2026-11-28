@@ -17,7 +17,11 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
 
     jwt_secret_key: str = "changeme"
+    jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60
+    jwt_remember_expire_days: int = 7
+    max_failed_login_attempts: int = 5
+    account_lockout_minutes: int = 15
     frontend_base_url: str = "http://localhost:5173"
     email_verify_expire_hours: int = 24
 

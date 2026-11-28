@@ -1,6 +1,7 @@
-"""Nghiệp vụ Đăng ký tài khoản & Xác thực Email khách hàng (FR-01 — US-04)."""
+"""Nghiệp vụ Tài khoản: Đăng ký, Xác thực Email, Đăng nhập & Đăng xuất (FR-01 — US-04, US-05)."""
 
 from datetime import datetime, timedelta
+import math
 
 from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
@@ -8,17 +9,27 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.security import (
+    DecodedAccessToken,
+    create_access_token,
     generate_one_time_token,
     hash_one_time_token,
     hash_password,
+    mark_jti_revoked_in_memory,
+    verify_password,
 )
 from app.core.timezone import VN_TZ, now_gmt7
-from app.models.core_models import PasswordResetToken, User
+from app.models.core_models import PasswordResetToken, ReservationAuditLog, User
 from app.schemas.auth_schemas import (
+    CurrentUserResponse,
+    LoginRequest,
+    LoginResponse,
+    LogoutResponse,
     RegisteredUserRead,
     RegisterRequest,
     RegisterResponse,
     VerifyEmailResponse,
+    normalize_login_identifier,
+    resolve_role_redirect_path,
 )
 from app.services.email_service import send_verification_email
 
@@ -39,6 +50,28 @@ class VerificationTokenError(Exception):
         super().__init__(message)
         self.message = message
         self.status_code = status_code
+
+
+class LoginAuthenticationError(Exception):
+    """Ngoại lệ khi đăng nhập sai thông tin, tài khoản bị khóa tạm 15p hoặc bị vô hiệu hóa."""
+
+    def __init__(
+        self,
+        *,
+        code: str,
+        message: str,
+        status_code: int,
+        locked_until: datetime | None = None,
+        retry_after_seconds: int | None = None,
+        remaining_attempts: int | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.code = code
+        self.message = message
+        self.status_code = status_code
+        self.locked_until = locked_until
+        self.retry_after_seconds = retry_after_seconds
+        self.remaining_attempts = remaining_attempts
 
 
 def _ensure_gmt7(dt: datetime) -> datetime:
@@ -220,4 +253,159 @@ def resend_verification_email(db: Session, email: str) -> VerifyEmailResponse:
         message="Đã gửi lại email xác thực mới. Vui lòng kiểm tra hộp thư của bạn.",
         email=user.email,
         email_verified=False,
+    )
+
+
+def authenticate_user(db: Session, payload: LoginRequest) -> LoginResponse:
+    """Đăng nhập bằng Email hoặc SĐT, kiểm tra khóa tạm 15 phút sau 5 lần sai và cấp JWT."""
+    settings = get_settings()
+    kind, normalized_identifier = normalize_login_identifier(payload.identifier)
+
+    criterion = (
+        User.email == normalized_identifier
+        if kind == "email"
+        else User.phone == normalized_identifier
+    )
+    user = db.execute(select(User).where(criterion)).scalar_one_or_none()
+
+    if user is None:
+        raise LoginAuthenticationError(
+            code="INVALID_CREDENTIALS",
+            message="Email/số điện thoại hoặc mật khẩu không chính xác.",
+            status_code=401,
+        )
+
+    if not user.is_active:
+        raise LoginAuthenticationError(
+            code="ACCOUNT_INACTIVE",
+            message="Tài khoản của bạn đang bị khóa bởi Quản lý nhà hàng.",
+            status_code=403,
+        )
+
+    current_time = now_gmt7()
+    lock_expired_reset = False
+
+    # 1. Nếu tài khoản đang trong thời gian khóa tạm 15 phút -> chặn ngay cả khi nhập đúng mật khẩu
+    if user.locked_until is not None:
+        locked_until_gmt7 = _ensure_gmt7(user.locked_until)
+        if locked_until_gmt7 > current_time:
+            remaining_secs = max(
+                1, math.ceil((locked_until_gmt7 - current_time).total_seconds())
+            )
+            remaining_mins = max(1, math.ceil(remaining_secs / 60))
+            raise LoginAuthenticationError(
+                code="ACCOUNT_LOCKED",
+                message=(
+                    f"Tài khoản đang tạm khóa do nhập sai mật khẩu quá số lần quy định. "
+                    f"Vui lòng thử lại sau khoảng {remaining_mins} phút."
+                ),
+                status_code=423,
+                locked_until=locked_until_gmt7,
+                retry_after_seconds=remaining_secs,
+            )
+        # Đã hết thời gian khóa 15 phút -> đặt lại bộ đếm trước khi kiểm tra lần thử mới
+        user.failed_login_attempts = 0
+        user.locked_until = None
+        lock_expired_reset = True
+
+    # 2. Kiểm tra mật khẩu băm bcrypt
+    if not verify_password(payload.password, user.password_hash):
+        user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
+        max_attempts = settings.max_failed_login_attempts
+        lockout_minutes = settings.account_lockout_minutes
+
+        if user.failed_login_attempts >= max_attempts:
+            lock_until = current_time + timedelta(minutes=lockout_minutes)
+            user.locked_until = lock_until
+            db.add(
+                ReservationAuditLog(
+                    actor_id=user.id,
+                    action="auth_account_locked",
+                    new_value={
+                        "failed_login_attempts": user.failed_login_attempts,
+                        "locked_until": lock_until.isoformat(),
+                    },
+                    reason="Sai mật khẩu liên tiếp chạm ngưỡng khóa tạm thời",
+                )
+            )
+            db.commit()
+            raise LoginAuthenticationError(
+                code="ACCOUNT_LOCKED",
+                message=(
+                    f"Bạn đã nhập sai mật khẩu {max_attempts} lần liên tiếp. "
+                    f"Tài khoản tạm khóa đăng nhập trong {lockout_minutes} phút."
+                ),
+                status_code=423,
+                locked_until=lock_until,
+                retry_after_seconds=lockout_minutes * 60,
+                remaining_attempts=0,
+            )
+
+        remaining = max_attempts - user.failed_login_attempts
+        db.commit()
+        raise LoginAuthenticationError(
+            code="INVALID_CREDENTIALS",
+            message=(
+                f"Email/số điện thoại hoặc mật khẩu không chính xác. "
+                f"Còn {remaining} lần thử trước khi tạm khóa {lockout_minutes} phút."
+            ),
+            status_code=401,
+            remaining_attempts=remaining,
+        )
+
+    # 3. Đăng nhập hợp lệ -> xóa bộ đếm sai và phát hành JWT có thời hạn
+    if (
+        lock_expired_reset
+        or user.failed_login_attempts > 0
+        or user.locked_until is not None
+    ):
+        user.failed_login_attempts = 0
+        user.locked_until = None
+        db.commit()
+        db.refresh(user)
+
+    token_bundle = create_access_token(
+        user_id=user.id,
+        role=user.role,
+        remember_me=payload.remember_me,
+    )
+    redirect_path = resolve_role_redirect_path(user.role)
+
+    return LoginResponse(
+        message="Đăng nhập thành công!",
+        access_token=token_bundle.access_token,
+        token_type="bearer",
+        expires_in=token_bundle.expires_in_seconds,
+        expires_at=token_bundle.expires_at,
+        redirect_path=redirect_path,
+        user=RegisteredUserRead.model_validate(user),
+    )
+
+
+def revoke_user_session(
+    db: Session, user: User, token_data: DecodedAccessToken
+) -> LogoutResponse:
+    """Hủy hiệu lực phiên JWT hiện tại khi người dùng đăng xuất (FR-01 — US-05)."""
+    mark_jti_revoked_in_memory(token_data.jti, token_data.expires_at)
+    db.add(
+        ReservationAuditLog(
+            actor_id=user.id,
+            action="auth_logout",
+            new_value={"expires_at": token_data.expires_at.isoformat()},
+            reason=token_data.jti,
+        )
+    )
+    db.commit()
+    return LogoutResponse(
+        message="Đăng xuất thành công. Phiên làm việc đã được hủy."
+    )
+
+
+def build_current_user_response(
+    user: User, token_data: DecodedAccessToken
+) -> CurrentUserResponse:
+    return CurrentUserResponse(
+        user=RegisteredUserRead.model_validate(user),
+        redirect_path=resolve_role_redirect_path(user.role),
+        session_expires_at=token_data.expires_at,
     )

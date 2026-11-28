@@ -1,12 +1,24 @@
-"""Pydantic v2 schemas và bộ kiểm tra dữ liệu đầu vào cho chức năng Tài khoản (FR-01 — US-04)."""
+"""Pydantic v2 schemas cho chức năng Tài khoản: Đăng ký, Đăng nhập & Đăng xuất (FR-01)."""
 
 from datetime import datetime
 import re
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 EMAIL_REGEX = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
 VN_PHONE_REGEX = re.compile(r"^(0[35789][0-9]{8}|02[0-9]{9})$")
+
+ROLE_REDIRECT_MAP: dict[str, str] = {
+    "customer": "/",
+    "staff": "/ops/reservations",
+    "manager": "/ops",
+}
+
+
+def resolve_role_redirect_path(role: str) -> str:
+    """Trả về đường dẫn điều hướng mặc định tương ứng với vai trò người dùng."""
+    return ROLE_REDIRECT_MAP.get(role, "/")
 
 
 def normalize_vn_phone(raw_phone: str) -> str:
@@ -17,6 +29,26 @@ def normalize_vn_phone(raw_phone: str) -> str:
     elif cleaned.startswith("84") and len(cleaned) in (11, 12):
         cleaned = "0" + cleaned[2:]
     return cleaned
+
+
+def normalize_login_identifier(raw_identifier: str) -> tuple[Literal["email", "phone"], str]:
+    """Nhận diện và chuẩn hóa Email hoặc SĐT Việt Nam dùng khi đăng nhập."""
+    trimmed = raw_identifier.strip()
+    if not trimmed:
+        raise ValueError("Vui lòng nhập email hoặc số điện thoại.")
+
+    if "@" in trimmed:
+        lowered = trimmed.lower()
+        if len(lowered) > 255 or not EMAIL_REGEX.match(lowered):
+            raise ValueError("Địa chỉ email đăng nhập không đúng định dạng.")
+        return "email", lowered
+
+    normalized_phone = normalize_vn_phone(trimmed)
+    if not VN_PHONE_REGEX.match(normalized_phone):
+        raise ValueError(
+            "Vui lòng nhập đúng định dạng email hoặc số điện thoại Việt Nam (ví dụ: 0901234567)."
+        )
+    return "phone", normalized_phone
 
 
 class RegisterRequest(BaseModel):
@@ -34,12 +66,12 @@ class RegisterRequest(BaseModel):
     )
     password: str = Field(
         description="Mật khẩu từ 8 đến 64 ký tự, gồm ít nhất 1 chữ cái và 1 chữ số",
-        examples=["VuonPho2026"],
+        examples=["********"],
     )
     confirm_password: str | None = Field(
         default=None,
         description="Nhập lại mật khẩu để xác nhận khớp",
-        examples=["VuonPho2026"],
+        examples=["********"],
     )
     accepted_terms: bool = Field(
         default=True,
@@ -151,3 +183,53 @@ class ResendVerificationRequest(BaseModel):
         if not EMAIL_REGEX.match(normalized):
             raise ValueError("Địa chỉ email không hợp lệ.")
         return normalized
+
+
+class LoginRequest(BaseModel):
+    identifier: str = Field(
+        description="Địa chỉ email hoặc số điện thoại Việt Nam đã đăng ký",
+        examples=["khach@example.com"],
+    )
+    password: str = Field(
+        description="Mật khẩu tài khoản",
+        examples=["********"],
+    )
+    remember_me: bool = Field(
+        default=False,
+        description="Ghi nhớ phiên đăng nhập dài hạn",
+    )
+
+    @field_validator("identifier")
+    @classmethod
+    def validate_identifier(cls, value: str) -> str:
+        _, normalized = normalize_login_identifier(value)
+        return normalized
+
+    @field_validator("password")
+    @classmethod
+    def validate_non_empty_password(cls, value: str) -> str:
+        if not value or not value.strip():
+            raise ValueError("Vui lòng nhập mật khẩu.")
+        if len(value.encode("utf-8")) > 72:
+            raise ValueError("Mật khẩu nhập vào vượt quá độ dài hợp lệ.")
+        return value
+
+
+class LoginResponse(BaseModel):
+    message: str
+    access_token: str
+    token_type: Literal["bearer"] = "bearer"
+    expires_in: int
+    expires_at: datetime
+    redirect_path: str
+    user: RegisteredUserRead
+
+
+class CurrentUserResponse(BaseModel):
+    user: RegisteredUserRead
+    redirect_path: str
+    session_expires_at: datetime
+
+
+class LogoutResponse(BaseModel):
+    message: str

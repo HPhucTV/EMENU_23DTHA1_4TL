@@ -4,21 +4,21 @@
 
 ---
 
-## Current Snapshot (Cập nhật: 27/11/2026 — `GMT+7`)
+## Current Snapshot (Cập nhật: 28/11/2026 — `GMT+7`)
 
 | Hạng mục | Trạng thái hiện tại |
 | :--- | :--- |
 | **Sprint hiện tại** | **Sprint 1** *(đang triển khai `EP-01`, hướng tới mốc `M2` ngày `29/11/2026`)* |
-| **Mốc kế tiếp** | Hoàn tất kiểm chứng **`M2: Lưu Baseline MS Project (29/11/2026)`** (nộp `.mpp` + ảnh chụp) & hoàn tất `US-05`..`US-08`, benchmark Ollama |
-| **Tiến độ mã nguồn** | Đã hoàn tất **`US-01` (`MC-11` — merged)**, **`US-02` (`MC-13` — merged)**, **`US-04` (`MC-14` — merged)**, **`MC-70` (Baseline M2, DoR/DoD v1.0, Risk Register v1.0, chốt Sandbox — merged)**, **`[AI]` `ai_models.py` + migration nhánh `ai` (`1.3.5.1` — merged)** và **`[AI]` Benchmark 3 model Ollama (`12` câu) + `OllamaClient` + `/api/v1/chat/health` (`1.3.5.2`)** |
+| **Mốc kế tiếp** | Hoàn tất kiểm chứng **`M2: Lưu Baseline MS Project (29/11/2026)`** & hoàn tất `US-06`..`US-08` |
+| **Tiến độ mã nguồn** | Đã hoàn tất **`US-01` (`MC-11`)**, **`US-02` (`MC-13`)**, **`US-04` (`MC-14`)**, **`MC-70`**, **`MC-71`**, **`MC-72`** (đều đã merge `develop`) và **`US-05` (`MC-15`)**: Đăng nhập bằng Email/SĐT (`POST /api/v1/auth/login`), cấp JWT có thời hạn, điều hướng 3 vai trò (`customer`, `staff`, `manager`), khóa tạm `15 phút` sau `5` lần sai, đăng xuất hủy phiên bền vững (`POST /api/v1/auth/logout`, `GET /api/v1/auth/me`) và giao diện `LoginPage` / `AuthContext` |
 | **Hồ sơ & Tài liệu** | Đã có `AGENTS.md`, `docs/SYSTEM_SPEC.md`, `docs/ERD.md`, `docs/ROADMAP.md`, `docs/SESSION_LOG.md`, `docs/MS_PROJECT_BASELINE_M2.xml`, `docs/BASELINE_M2_REPORT.md`, `docs/DOR_DOD_QUALITY.md`, `docs/RISK_REGISTER.md`, `docs/PAYMENT_EMAIL_SMS_RESEARCH.md` (`MC-69`/`MC-70`), Chat Contract (`MC-68`), `ollama/BENCHMARK_REPORT.md` & bộ ảnh Figma (`PR #10`) |
-| **Quy ước đã chốt** | Jira key **`MC`** (`MC-xx`); nhóm **4 thành viên**; kiến trúc Zero File-Overlap; mật khẩu băm `bcrypt` (cost `12`), token lưu `SHA-256`; **chốt VNPay Sandbox (chính) + MoMo Sandbox (dự phòng), Brevo + Mailpit (Email), SpeedSMS/eSMS `<= 200k` (`SMS_ENABLED`)** |
+| **Quy ước đã chốt** | Jira key **`MC`** (`MC-xx`); nhóm **4 thành viên**; kiến trúc Zero File-Overlap; mật khẩu băm `bcrypt` (cost `12`), JWT `HS256` kèm thu hồi `jti`, cấu hình `.gitguardian.yaml` loại trừ thư mục test |
 
 ### Cảnh báo kỹ thuật & Blocker cần xử lý ngay
-1. **Môi trường Docker / PostgreSQL trên máy local**: Máy Windows hiện có sẵn `Node` và `Python 3.13.9` (đã dựng `backend/.venv`), nhưng Docker daemon / PostgreSQL 16 local chưa chạy khi kiểm thử. Khi đẩy lên GitHub/Staging, chạy `alembic upgrade heads` trên PostgreSQL 16 để kiểm chứng tích hợp thực tế.
+1. **Môi trường Docker / PostgreSQL trên máy local**: Khi đẩy lên GitHub/Staging hoặc chạy Docker, thực thi `alembic upgrade heads` trên PostgreSQL 16 để đồng bộ đủ 16 bảng (`core` + `ai`).
 2. **Đầu việc kế tiếp trong Sprint 1**:
-   - `[FS]` Triển khai tiếp `US-05` (Đăng nhập/Đăng xuất bằng Email hoặc SĐT, cấp JWT, điều hướng 3 vai trò, khóa tạm 15 phút sau 5 lần sai), `US-06` (Quên mật khẩu), `US-07` (Phân quyền RBAC & quản lý tài khoản NV) và `US-08` (CI GitHub Actions).
-   - `[AI]` Push nhánh & mở PR cho task Benchmark Ollama + `OllamaClient` + `/api/v1/chat/health` (`1.3.5.2`), chuẩn bị cho Sprint 2: `US-15` (PO/PM duyệt chốt model LLM từ số liệu `ollama/BENCHMARK_REPORT.md`) và dựng lõi RAG (`rag_retriever.py`, `prompts.py`, `seed_ai.py`).
+   - `[FS]` Mở PR `MC-15` (`US-05`) vào `develop`, sau đó triển khai tiếp `US-06` (Quên mật khẩu — link 1 lần có thời hạn), `US-07` (Phân quyền RBAC 3 vai trò & quản lý tài khoản NV) và `US-08` (CI GitHub Actions).
+   - `[BA]` Hoàn tất nghiệm thu `US-03` (Prototype Figma luồng chính).
 
 ---
 
@@ -41,6 +41,25 @@
 ---
 
 ## Nhật ký các phiên làm việc
+
+### [2026-11-28 19:38 GMT+7] — Antigravity AI + Dev Fullstack (Nguyễn Văn Tiến) | Nhánh: `MC-15-us-05-dang-nhập-va-dang-xuất` | Jira: `MC-15`
+- **Mục tiêu phiên:** Đồng bộ nhánh `MC-15` lên `origin/develop` (`a6c2b2d`) và triển khai trọn vẹn **`[US-05]` Đăng nhập và đăng xuất** (`FR-01`: đăng nhập Email/SĐT, điều hướng 3 vai trò, khóa tạm `15 phút` sau `5` lần sai mật khẩu, JWT có thời hạn, đăng xuất hủy phiên).
+- **Đã hoàn thành:**
+  - Bổ sung [.gitguardian.yaml](../.gitguardian.yaml) ở thư mục gốc và chuẩn hóa dữ liệu giả lập kiểm thử để không phát sinh cảnh báo nhầm của GitGuardian trên PR.
+  - Mở rộng [security.py](../backend/app/core/security.py) và tạo [deps.py](../backend/app/core/deps.py): phát hành & xác thực JWT `HS256` (`PyJWT`, đảm bảo khóa ký `>= 32 bytes` chuẩn RFC 7518), gắn `exp` (`60 phút` mặc định hoặc `7 ngày` khi chọn `Ghi nhớ đăng nhập`) và thu hồi `jti` bền vững qua `reservation_audit_logs` khi đăng xuất.
+  - Mở rộng [auth_schemas.py](../backend/app/schemas/auth_schemas.py), [auth_service.py](../backend/app/services/auth_service.py), [auth_router.py](../backend/app/api/v1/auth_router.py): cung cấp `POST /api/v1/auth/login` (nhận Email hoặc SĐT Việt Nam, trả `redirect_path` theo vai trò `customer -> /`, `staff -> /ops/reservations`, `manager -> /ops`; đếm lần sai và khóa `423 ACCOUNT_LOCKED` trong `15 phút` khi chạm `5` lần sai, tự mở khóa & reset bộ đếm sau `15 phút`), `GET /api/v1/auth/me` và `POST /api/v1/auth/logout`.
+  - Xây dựng [AuthContext.tsx](../frontend/src/context/AuthContext.tsx), cập nhật [http.ts](../frontend/src/lib/http.ts), [CustomerLayout.tsx](../frontend/src/layouts/CustomerLayout.tsx), [OperationsLayout.tsx](../frontend/src/layouts/OperationsLayout.tsx) và màn hình [LoginPage.tsx](../frontend/src/pages/LoginPage.tsx) bám sát Figma (`10_dang_nhap.png` & `12_dang_nhap_dien_thoai.png`).
+  - Viết bộ kiểm thử tự động [test_auth_login.py](../backend/tests/core/test_auth_login.py) & [LoginPage.test.tsx](../frontend/src/test/LoginPage.test.tsx); cập nhật [ROADMAP.md](ROADMAP.md).
+- **Quyết định chốt:**
+  - Hủy phiên đăng xuất ở cả 2 lớp: xóa session + Bearer token phía trình duyệt và thu hồi `jti` phía server (bộ nhớ đệm + bản ghi `auth_logout` trong `reservation_audit_logs`) để token cũ không thể tái sử dụng kể cả khi server khởi động lại.
+- **Vấn đề / Blocker:**
+  - Không có blocker.
+- **Kiểm thử đã chạy:**
+  - Back-end `pytest -v`: **`28/28 passed`** (`16` test Core gồm `US-01`, `US-02`, `US-04`, `US-05` + `12` test AI).
+  - Front-end `npm test` (`vitest run`): **`8/8 passed`** (`HomePage`, `RegisterPage`, `LoginPage`); `npm run build` (`tsc -b && vite build`): **thành công (`0` lỗi)**.
+- **Bước tiếp theo:**
+  1. Commit, push nhánh `MC-15-us-05-dang-nhập-va-dang-xuất` và mở PR `[MC-15] [US-05] Đăng nhập Email/SĐT, điều hướng vai trò, khóa 15p và đăng xuất hủy phiên` vào `develop`.
+  2. Triển khai tiếp `US-06` (Quên mật khẩu), `US-07` (Phân quyền RBAC & tài khoản nhân viên) và `US-08` (CI GitHub Actions).
 
 ### [2026-11-27 21:42 GMT+7] — Antigravity AI + AI Dev (Nguyễn Đoàn Trường Vũ) | WBS: `1.3.5.2`
 - **Mục tiêu phiên:** Benchmark `>= 2` model Ollama trên `>= 10` câu tiếng Việt, xây dựng `OllamaClient` bất đồng bộ và mở endpoint `GET /api/v1/chat/health` theo phân vùng Zero File-Overlap.

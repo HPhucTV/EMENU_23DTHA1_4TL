@@ -1,11 +1,18 @@
-"""REST API Xác thực tài khoản (FR-01 — US-04: Đăng ký & Xác thực Email)."""
+"""REST API Xác thực tài khoản: Đăng ký, Xác thực Email, Đăng nhập & Đăng xuất (FR-01)."""
+
+from typing import Any
 
 from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.deps import AuthenticatedSession, get_current_auth_session
 from app.schemas.auth_schemas import (
+    CurrentUserResponse,
+    LoginRequest,
+    LoginResponse,
+    LogoutResponse,
     RegisterRequest,
     RegisterResponse,
     ResendVerificationRequest,
@@ -14,9 +21,13 @@ from app.schemas.auth_schemas import (
 )
 from app.services.auth_service import (
     DuplicateAccountError,
+    LoginAuthenticationError,
     VerificationTokenError,
+    authenticate_user,
+    build_current_user_response,
     register_customer,
     resend_verification_email,
+    revoke_user_session,
     verify_customer_email,
 )
 
@@ -46,6 +57,61 @@ def register_endpoint(
                 }
             },
         )
+
+
+@router.post(
+    "/login",
+    response_model=LoginResponse,
+    summary="Đăng nhập bằng Email hoặc SĐT, điều hướng theo vai trò và khóa tạm 15p sau 5 lần sai",
+)
+def login_endpoint(
+    payload: LoginRequest,
+    db: Session = Depends(get_db),
+) -> LoginResponse | JSONResponse:
+    try:
+        return authenticate_user(db=db, payload=payload)
+    except LoginAuthenticationError as exc:
+        detail_payload: dict[str, Any] = {
+            "code": exc.code,
+            "message": exc.message,
+        }
+        if exc.locked_until is not None:
+            detail_payload["locked_until"] = exc.locked_until.isoformat()
+        if exc.retry_after_seconds is not None:
+            detail_payload["retry_after_seconds"] = exc.retry_after_seconds
+        if exc.remaining_attempts is not None:
+            detail_payload["remaining_attempts"] = exc.remaining_attempts
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": detail_payload},
+        )
+
+
+@router.get(
+    "/me",
+    response_model=CurrentUserResponse,
+    summary="Lấy thông tin người dùng của phiên đăng nhập hiện hành",
+)
+def get_me_endpoint(
+    auth_session: AuthenticatedSession = Depends(get_current_auth_session),
+) -> CurrentUserResponse:
+    return build_current_user_response(
+        user=auth_session.user, token_data=auth_session.token_data
+    )
+
+
+@router.post(
+    "/logout",
+    response_model=LogoutResponse,
+    summary="Đăng xuất và hủy hiệu lực phiên JWT hiện hành",
+)
+def logout_endpoint(
+    auth_session: AuthenticatedSession = Depends(get_current_auth_session),
+    db: Session = Depends(get_db),
+) -> LogoutResponse:
+    return revoke_user_session(
+        db=db, user=auth_session.user, token_data=auth_session.token_data
+    )
 
 
 @router.post(
