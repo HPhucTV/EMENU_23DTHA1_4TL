@@ -117,7 +117,7 @@
 | [ ] | `US-03` | Thiết kế Figma luồng chính | `EP-01` | — | `1.3.2.1` | High | 5 | PO/BA | Prototype trang chủ, thực đơn, đặt bàn, đặt món, cọc, chat, quản lý; dùng tốt mobile; PO duyệt |
 | [x] | `US-04` | Đăng ký tài khoản | `EP-01` | `FR-01` | `1.3.4.1` | High | 3 | Dev Fullstack | Email/SĐT không trùng; mật khẩu băm `bcrypt`; gửi email xác thực 1 lần; báo lỗi rõ từng trường (`MC-14`) |
 | [x] | `US-05` | Đăng nhập và đăng xuất | `EP-01` | `FR-01` | `1.3.4.1` | High | 3 | Dev Fullstack | Đăng nhập Email/SĐT; điều hướng 3 vai trò; sai `5` lần khóa `15p`; JWT có thời hạn; đăng xuất hủy phiên (`MC-15`) |
-| [ ] | `US-06` | Quên mật khẩu | `EP-01` | `FR-01` | `1.3.4.1` | Med | 2 | Dev Fullstack | Gửi link đặt lại có thời hạn, dùng `1` lần; mật khẩu mới lưu dạng băm |
+| [x] | `US-06` | Quên mật khẩu | `EP-01` | `FR-01` | `1.3.4.1` | Med | 2 | Dev Fullstack | Gửi link đặt lại có thời hạn (`15p`), dùng `1` lần (`SHA-256`); mật khẩu mới lưu băm `bcrypt` (`MC-16`) |
 | [ ] | `US-07` | Phân quyền và tài khoản nhân viên | `EP-01` | `FR-01` | `1.3.4.2` | High | 5 | Dev Fullstack | 3 vai trò (Khách, NV, QL); ngoài quyền trả `403` + log; QL tạo/khóa/mở khóa tài khoản NV |
 | [ ] | `US-08` | CI bằng GitHub Actions | `EP-01` | — | `1.3.3.3` | Med | 2 | Dev Fullstack | PR kích hoạt build & test; hiển thị kết quả trên PR; lỗi build chặn merge `main` |
 

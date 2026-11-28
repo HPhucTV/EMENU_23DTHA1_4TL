@@ -3,10 +3,12 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { CustomerLayout } from './layouts/CustomerLayout';
 import { OperationsLayout } from './layouts/OperationsLayout';
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
 import { PlaceholderPage } from './pages/PlaceholderPage';
 import { RegisterPage } from './pages/RegisterPage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { VerifyEmailPage } from './pages/VerifyEmailPage';
 
 const queryClient = new QueryClient({
@@ -61,16 +63,8 @@ export function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/verify-email" element={<VerifyEmailPage />} />
-              <Route
-                path="/forgot-password"
-                element={
-                  <PlaceholderPage
-                    title="Quên mật khẩu"
-                    storyRef="Sprint 1 • US-06"
-                    description="Chức năng gửi liên kết đặt lại mật khẩu dùng 1 lần qua email sẽ được triển khai ngay tại US-06."
-                  />
-                }
-              />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
             </Route>
 
             <Route path="/ops" element={<OperationsLayout />}>

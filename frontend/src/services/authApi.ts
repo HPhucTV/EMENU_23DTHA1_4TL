@@ -3,11 +3,15 @@ import { httpClient } from '../lib/http';
 import type {
   ApiErrorDetail,
   CurrentUserResponse,
+  ForgotPasswordResponse,
   LoginPayload,
   LoginResponse,
   LogoutResponse,
   RegisterPayload,
   RegisterResponse,
+  ResetPasswordPayload,
+  ResetPasswordResponse,
+  ValidateResetTokenResponse,
   VerifyEmailResponse,
 } from '../types/auth';
 
@@ -42,6 +46,31 @@ export async function resendVerificationEmail(email: string): Promise<VerifyEmai
   const response = await httpClient.post<VerifyEmailResponse>('/api/v1/auth/resend-verification', {
     email,
   });
+  return response.data;
+}
+
+export async function requestPasswordReset(email: string): Promise<ForgotPasswordResponse> {
+  const response = await httpClient.post<ForgotPasswordResponse>('/api/v1/auth/forgot-password', {
+    email,
+  });
+  return response.data;
+}
+
+export async function validateResetToken(token: string): Promise<ValidateResetTokenResponse> {
+  const response = await httpClient.get<ValidateResetTokenResponse>(
+    '/api/v1/auth/reset-password/validate',
+    { params: { token } },
+  );
+  return response.data;
+}
+
+export async function confirmPasswordReset(
+  payload: ResetPasswordPayload,
+): Promise<ResetPasswordResponse> {
+  const response = await httpClient.post<ResetPasswordResponse>(
+    '/api/v1/auth/reset-password',
+    payload,
+  );
   return response.data;
 }
 

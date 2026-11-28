@@ -9,15 +9,15 @@
 | Hạng mục | Trạng thái hiện tại |
 | :--- | :--- |
 | **Sprint hiện tại** | **Sprint 1** *(đang triển khai `EP-01`, hướng tới mốc `M2` ngày `29/11/2026`)* |
-| **Mốc kế tiếp** | Hoàn tất kiểm chứng **`M2: Lưu Baseline MS Project (29/11/2026)`** & hoàn tất `US-06`..`US-08` |
-| **Tiến độ mã nguồn** | Đã hoàn tất **`US-01` (`MC-11`)**, **`US-02` (`MC-13`)**, **`US-04` (`MC-14`)**, **`MC-70`**, **`MC-71`**, **`MC-72`** (đều đã merge `develop`) và **`US-05` (`MC-15`)**: Đăng nhập bằng Email/SĐT (`POST /api/v1/auth/login`), cấp JWT có thời hạn, điều hướng 3 vai trò (`customer`, `staff`, `manager`), khóa tạm `15 phút` sau `5` lần sai, đăng xuất hủy phiên bền vững (`POST /api/v1/auth/logout`, `GET /api/v1/auth/me`) và giao diện `LoginPage` / `AuthContext` |
+| **Mốc kế tiếp** | Hoàn tất kiểm chứng **`M2: Lưu Baseline MS Project (29/11/2026)`** & hoàn tất `US-07`, `US-08` |
+| **Tiến độ mã nguồn** | Đã hoàn tất **`US-01` (`MC-11`)**, **`US-02` (`MC-13`)**, **`US-04` (`MC-14`)**, **`US-05` (`MC-15`)**, **`MC-70`**, **`MC-71`**, **`MC-72`** (đều đã merge `develop`) và **`US-06` (`MC-16`)**: Quên & đặt lại mật khẩu qua email (`POST /api/v1/auth/forgot-password`, `GET /api/v1/auth/reset-password/validate`, `POST /api/v1/auth/reset-password`), token một lần hạn `15 phút` lưu băm `SHA-256`, mật khẩu mới băm `bcrypt`, giao diện `ForgotPasswordPage` & `ResetPasswordPage` |
 | **Hồ sơ & Tài liệu** | Đã có `AGENTS.md`, `docs/SYSTEM_SPEC.md`, `docs/ERD.md`, `docs/ROADMAP.md`, `docs/SESSION_LOG.md`, `docs/MS_PROJECT_BASELINE_M2.xml`, `docs/BASELINE_M2_REPORT.md`, `docs/DOR_DOD_QUALITY.md`, `docs/RISK_REGISTER.md`, `docs/PAYMENT_EMAIL_SMS_RESEARCH.md` (`MC-69`/`MC-70`), Chat Contract (`MC-68`), `ollama/BENCHMARK_REPORT.md` & bộ ảnh Figma (`PR #10`) |
-| **Quy ước đã chốt** | Jira key **`MC`** (`MC-xx`); nhóm **4 thành viên**; kiến trúc Zero File-Overlap; mật khẩu băm `bcrypt` (cost `12`), JWT `HS256` kèm thu hồi `jti`, cấu hình `.gitguardian.yaml` loại trừ thư mục test |
+| **Quy ước đã chốt** | Jira key **`MC`** (`MC-xx`); nhóm **4 thành viên**; kiến trúc Zero File-Overlap; mật khẩu băm `bcrypt` (cost `12`), JWT `HS256` kèm thu hồi `jti`, token một lần băm `SHA-256`, `.gitguardian.yaml` loại trừ thư mục test |
 
 ### Cảnh báo kỹ thuật & Blocker cần xử lý ngay
 1. **Môi trường Docker / PostgreSQL trên máy local**: Khi đẩy lên GitHub/Staging hoặc chạy Docker, thực thi `alembic upgrade heads` trên PostgreSQL 16 để đồng bộ đủ 16 bảng (`core` + `ai`).
 2. **Đầu việc kế tiếp trong Sprint 1**:
-   - `[FS]` Mở PR `MC-15` (`US-05`) vào `develop`, sau đó triển khai tiếp `US-06` (Quên mật khẩu — link 1 lần có thời hạn), `US-07` (Phân quyền RBAC 3 vai trò & quản lý tài khoản NV) và `US-08` (CI GitHub Actions).
+   - `[FS]` Mở PR `MC-16` (`US-06`) vào `develop`, sau đó triển khai tiếp `US-07` (Phân quyền RBAC 3 vai trò trả `403` + log, Quản lý tạo/khóa/mở khóa tài khoản nhân viên) và `US-08` (CI bằng GitHub Actions).
    - `[BA]` Hoàn tất nghiệm thu `US-03` (Prototype Figma luồng chính).
 
 ---
@@ -41,6 +41,24 @@
 ---
 
 ## Nhật ký các phiên làm việc
+
+### [2026-11-28 20:09 GMT+7] — Antigravity AI + Dev Fullstack (Nguyễn Văn Tiến) | Nhánh: `MC-16-us-06-quen-mật-khẩu` | Jira: `MC-16`
+- **Mục tiêu phiên:** Đồng bộ nhánh `MC-16` lên `origin/develop` (`92eafea`) và triển khai trọn vẹn **`[US-06]` Quên mật khẩu** (`FR-01`: gửi liên kết đặt lại có thời hạn, dùng `1` lần, mật khẩu mới lưu dạng băm `bcrypt`).
+- **Đã hoàn thành:**
+  - Mở rộng [email_service.py](../backend/app/services/email_service.py), [config.py](../backend/app/core/config.py) và [.env.example](../backend/.env.example): thêm cấu hình `PASSWORD_RESET_EXPIRE_MINUTES=15`, tách helper tạo mẫu HTML email chung `_build_action_email_html` và hàm `send_password_reset_email`.
+  - Mở rộng [auth_schemas.py](../backend/app/schemas/auth_schemas.py), [auth_service.py](../backend/app/services/auth_service.py) và [auth_router.py](../backend/app/api/v1/auth_router.py): hợp nhất logic validate email/độ mạnh mật khẩu và kiểm tra token một lần dùng chung; cung cấp `POST /api/v1/auth/forgot-password` (vô hiệu token cũ, tạo token `SHA-256` hạn `15 phút`, trả thông báo trung lập tránh lộ email), `GET /api/v1/auth/reset-password/validate` và `POST /api/v1/auth/reset-password` (băm `bcrypt`, khóa token đã dùng, xóa trạng thái tạm khóa `failed_login_attempts`/`locked_until`, ghi audit log).
+  - Xây dựng [ForgotPasswordPage.tsx](../frontend/src/pages/ForgotPasswordPage.tsx), [ResetPasswordPage.tsx](../frontend/src/pages/ResetPasswordPage.tsx), cập nhật [auth.ts](../frontend/src/types/auth.ts), [authApi.ts](../frontend/src/services/authApi.ts) và [App.tsx](../frontend/src/App.tsx).
+  - Viết kiểm thử tự động [test_auth_reset_password.py](../backend/tests/core/test_auth_reset_password.py) & [ForgotResetPasswordPage.test.tsx](../frontend/src/test/ForgotResetPasswordPage.test.tsx); cập nhật [ROADMAP.md](ROADMAP.md).
+- **Quyết định chốt:**
+  - Liên kết đặt lại mật khẩu có thời hạn `15 phút`, thu hồi mọi token `password_reset` chưa dùng trước đó khi cấp mới hoặc đặt lại xong, đồng thời xóa khóa tạm thời (`locked_until`) để người dùng đăng nhập lại ngay với mật khẩu mới.
+- **Vấn đề / Blocker:**
+  - Không có blocker.
+- **Kiểm thử đã chạy:**
+  - Back-end `pytest -v`: **`30/30 passed`** (`18` test Core gồm `US-01`, `US-02`, `US-04`, `US-05`, `US-06` + `12` test AI).
+  - Front-end `npm test` (`vitest run`): **`11/11 passed`** (`HomePage`, `RegisterPage`, `LoginPage`, `ForgotResetPasswordPage`); `npm run build` (`tsc -b && vite build`): **thành công (`0` lỗi)**.
+- **Bước tiếp theo:**
+  1. Commit, push nhánh `MC-16-us-06-quen-mật-khẩu` và mở PR `[MC-16] [US-06] Quên mật khẩu và đặt lại mật khẩu qua email một lần` vào `develop`.
+  2. Triển khai tiếp `US-07` (Phân quyền RBAC 3 vai trò & quản lý tài khoản nhân viên) và `US-08` (CI bằng GitHub Actions).
 
 ### [2026-11-28 19:38 GMT+7] — Antigravity AI + Dev Fullstack (Nguyễn Văn Tiến) | Nhánh: `MC-15-us-05-dang-nhập-va-dang-xuất` | Jira: `MC-15`
 - **Mục tiêu phiên:** Đồng bộ nhánh `MC-15` lên `origin/develop` (`a6c2b2d`) và triển khai trọn vẹn **`[US-05]` Đăng nhập và đăng xuất** (`FR-01`: đăng nhập Email/SĐT, điều hướng 3 vai trò, khóa tạm `15 phút` sau `5` lần sai mật khẩu, JWT có thời hạn, đăng xuất hủy phiên).

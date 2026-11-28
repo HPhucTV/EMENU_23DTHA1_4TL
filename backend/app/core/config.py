@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     account_lockout_minutes: int = 15
     frontend_base_url: str = "http://localhost:5173"
     email_verify_expire_hours: int = 24
+    password_reset_expire_minutes: int = 15
 
     email_provider: str = "console"  # console | smtp | brevo
     brevo_api_key: str = ""

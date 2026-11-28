@@ -117,6 +117,40 @@ def send_email_with_retry(msg: OutboxEmail, max_retries: int = 3) -> bool:
     return False
 
 
+def _build_action_email_html(
+    *,
+    heading: str,
+    full_name: str,
+    intro_text: str,
+    cta_label: str,
+    action_url: str,
+    expiry_note: str,
+) -> str:
+    """Tạo mẫu HTML thống nhất mang nhận diện Vườn Phố cho các email có liên kết hành động."""
+    return f"""
+    <div style="font-family: 'Be Vietnam Pro', Arial, sans-serif; background:#F8F7F3; padding:24px; color:#1C2420;">
+      <div style="max-width:560px; margin:0 auto; background:#FFFFFF; border-radius:16px; padding:32px; border:1px solid #E5E2DC;">
+        <p style="font-size:12px; letter-spacing:0.16em; text-transform:uppercase; color:#1E4332; margin:0 0 8px;">
+          Nhà hàng Ẩm thực Vườn Phố
+        </p>
+        <h2 style="margin:0 0 16px; color:#1E4332;">{heading}</h2>
+        <p>Xin chào <strong>{full_name}</strong>,</p>
+        <p>{intro_text}</p>
+        <p style="margin:24px 0;">
+          <a href="{action_url}"
+             style="display:inline-block; background:#1E4332; color:#FFFFFF; text-decoration:none; padding:12px 24px; border-radius:8px; font-weight:600;">
+            {cta_label}
+          </a>
+        </p>
+        <p style="font-size:13px; color:#57534E;">
+          {expiry_note}<br/>
+          Hoặc sao chép đường dẫn: <a href="{action_url}" style="color:#1E4332;">{action_url}</a>
+        </p>
+      </div>
+    </div>
+    """.strip()
+
+
 def send_verification_email(
     *, to_email: str, full_name: str, raw_token: str
 ) -> bool:
@@ -135,28 +169,20 @@ def send_verification_email(
         "Nếu bạn không thực hiện đăng ký này, vui lòng bỏ qua email.\n"
         "— Nhà hàng Ẩm thực Vườn Phố (TP.HCM · GMT+7)"
     )
-    html_body = f"""
-    <div style="font-family: 'Be Vietnam Pro', Arial, sans-serif; background:#F8F7F3; padding:24px; color:#1C2420;">
-      <div style="max-width:560px; margin:0 auto; background:#FFFFFF; border-radius:16px; padding:32px; border:1px solid #E5E2DC;">
-        <p style="font-size:12px; letter-spacing:0.16em; text-transform:uppercase; color:#1E4332; margin:0 0 8px;">
-          Nhà hàng Ẩm thực Vườn Phố
-        </p>
-        <h2 style="margin:0 0 16px; color:#1E4332;">Xác thực tài khoản của bạn</h2>
-        <p>Xin chào <strong>{full_name}</strong>,</p>
-        <p>Cảm ơn bạn đã đăng ký tài khoản tại Vườn Phố. Nhấn vào nút bên dưới để xác thực email và bắt đầu đặt bàn:</p>
-        <p style="margin:24px 0;">
-          <a href="{verify_url}"
-             style="display:inline-block; background:#1E4332; color:#FFFFFF; text-decoration:none; padding:12px 24px; border-radius:8px; font-weight:600;">
-            Xác thực địa chỉ Email →
-          </a>
-        </p>
-        <p style="font-size:13px; color:#57534E;">
-          Liên kết có hiệu lực trong <strong>{expire_hours} giờ</strong> và chỉ sử dụng <strong>1 lần</strong>.<br/>
-          Hoặc sao chép đường dẫn: <a href="{verify_url}" style="color:#1E4332;">{verify_url}</a>
-        </p>
-      </div>
-    </div>
-    """.strip()
+    html_body = _build_action_email_html(
+        heading="Xác thực tài khoản của bạn",
+        full_name=full_name,
+        intro_text=(
+            "Cảm ơn bạn đã đăng ký tài khoản tại Vườn Phố. "
+            "Nhấn vào nút bên dưới để xác thực email và bắt đầu đặt bàn:"
+        ),
+        cta_label="Xác thực địa chỉ Email →",
+        action_url=verify_url,
+        expiry_note=(
+            f"Liên kết có hiệu lực trong <strong>{expire_hours} giờ</strong> "
+            "và chỉ sử dụng <strong>1 lần</strong>."
+        ),
+    )
 
     return send_email_with_retry(
         OutboxEmail(
@@ -166,5 +192,50 @@ def send_verification_email(
             html_body=html_body,
             text_body=text_body,
             verification_url=verify_url,
+        )
+    )
+
+
+def send_password_reset_email(
+    *, to_email: str, full_name: str, raw_token: str
+) -> bool:
+    """Soạn và gửi email liên kết đặt lại mật khẩu có thời hạn, dùng 1 lần (FR-01 — US-06)."""
+    settings = get_settings()
+    base_url = settings.frontend_base_url.rstrip("/")
+    reset_url = f"{base_url}/reset-password?token={raw_token}"
+    expire_minutes = settings.password_reset_expire_minutes
+
+    subject = "[Vườn Phố] Đặt lại mật khẩu tài khoản của bạn"
+    text_body = (
+        f"Xin chào {full_name},\n\n"
+        f"Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn tại {settings.restaurant_name}.\n"
+        f"Vui lòng mở liên kết dưới đây để tạo mật khẩu mới (hiệu lực {expire_minutes} phút, chỉ dùng 1 lần):\n"
+        f"{reset_url}\n\n"
+        "Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này.\n"
+        "— Nhà hàng Ẩm thực Vườn Phố (TP.HCM · GMT+7)"
+    )
+    html_body = _build_action_email_html(
+        heading="Yêu cầu đặt lại mật khẩu",
+        full_name=full_name,
+        intro_text=(
+            "Bạn vừa yêu cầu đặt lại mật khẩu tài khoản tại Vườn Phố. "
+            "Nhấn vào nút bên dưới để thiết lập mật khẩu mới:"
+        ),
+        cta_label="Đặt lại mật khẩu →",
+        action_url=reset_url,
+        expiry_note=(
+            f"Liên kết có hiệu lực trong <strong>{expire_minutes} phút</strong> "
+            "và chỉ sử dụng được <strong>1 lần</strong>."
+        ),
+    )
+
+    return send_email_with_retry(
+        OutboxEmail(
+            to_email=to_email,
+            to_name=full_name,
+            subject=subject,
+            html_body=html_body,
+            text_body=text_body,
+            verification_url=reset_url,
         )
     )
