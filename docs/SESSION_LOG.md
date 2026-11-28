@@ -10,15 +10,15 @@
 | :--- | :--- |
 | **Sprint hiện tại** | **Sprint 1** *(đang triển khai `EP-01`, hướng tới mốc `M2` ngày `29/11/2026`)* |
 | **Mốc kế tiếp** | Hoàn tất kiểm chứng **`M2: Lưu Baseline MS Project (29/11/2026)`** (nộp `.mpp` + ảnh chụp) & hoàn tất `US-05`..`US-08`, benchmark Ollama |
-| **Tiến độ mã nguồn** | Đã hoàn tất **`US-01` (`MC-11` — merged)**, **`US-02` (`MC-13` — merged)**, **`US-04` (`MC-14` — merged)**, **`MC-70` (Baseline M2, DoR/DoD v1.0, Risk Register v1.0, chốt Sandbox — merged)** và **`[AI]` `ai_models.py` + Alembic migration nhánh `ai` (`1.3.5.1` — đủ `16/16` bảng CSDL)** |
-| **Hồ sơ & Tài liệu** | Đã có `AGENTS.md`, `docs/SYSTEM_SPEC.md`, `docs/ERD.md`, `docs/ROADMAP.md`, `docs/SESSION_LOG.md`, `docs/MS_PROJECT_BASELINE_M2.xml`, `docs/BASELINE_M2_REPORT.md`, `docs/DOR_DOD_QUALITY.md`, `docs/RISK_REGISTER.md`, `docs/PAYMENT_EMAIL_SMS_RESEARCH.md` (`MC-69`/`MC-70`), Chat Contract (`MC-68`) & bộ ảnh Figma (`PR #10`) |
+| **Tiến độ mã nguồn** | Đã hoàn tất **`US-01` (`MC-11` — merged)**, **`US-02` (`MC-13` — merged)**, **`US-04` (`MC-14` — merged)**, **`MC-70` (Baseline M2, DoR/DoD v1.0, Risk Register v1.0, chốt Sandbox — merged)**, **`[AI]` `ai_models.py` + migration nhánh `ai` (`1.3.5.1` — merged)** và **`[AI]` Benchmark 3 model Ollama (`12` câu) + `OllamaClient` + `/api/v1/chat/health` (`1.3.5.2`)** |
+| **Hồ sơ & Tài liệu** | Đã có `AGENTS.md`, `docs/SYSTEM_SPEC.md`, `docs/ERD.md`, `docs/ROADMAP.md`, `docs/SESSION_LOG.md`, `docs/MS_PROJECT_BASELINE_M2.xml`, `docs/BASELINE_M2_REPORT.md`, `docs/DOR_DOD_QUALITY.md`, `docs/RISK_REGISTER.md`, `docs/PAYMENT_EMAIL_SMS_RESEARCH.md` (`MC-69`/`MC-70`), Chat Contract (`MC-68`), `ollama/BENCHMARK_REPORT.md` & bộ ảnh Figma (`PR #10`) |
 | **Quy ước đã chốt** | Jira key **`MC`** (`MC-xx`); nhóm **4 thành viên**; kiến trúc Zero File-Overlap; mật khẩu băm `bcrypt` (cost `12`), token lưu `SHA-256`; **chốt VNPay Sandbox (chính) + MoMo Sandbox (dự phòng), Brevo + Mailpit (Email), SpeedSMS/eSMS `<= 200k` (`SMS_ENABLED`)** |
 
 ### Cảnh báo kỹ thuật & Blocker cần xử lý ngay
 1. **Môi trường Docker / PostgreSQL trên máy local**: Máy Windows hiện có sẵn `Node` và `Python 3.13.9` (đã dựng `backend/.venv`), nhưng Docker daemon / PostgreSQL 16 local chưa chạy khi kiểm thử. Khi đẩy lên GitHub/Staging, chạy `alembic upgrade heads` trên PostgreSQL 16 để kiểm chứng tích hợp thực tế.
 2. **Đầu việc kế tiếp trong Sprint 1**:
    - `[FS]` Triển khai tiếp `US-05` (Đăng nhập/Đăng xuất bằng Email hoặc SĐT, cấp JWT, điều hướng 3 vai trò, khóa tạm 15 phút sau 5 lần sai), `US-06` (Quên mật khẩu), `US-07` (Phân quyền RBAC & quản lý tài khoản NV) và `US-08` (CI GitHub Actions).
-   - `[AI]` Push nhánh & mở PR cho task tạo `ai_models.py` & migration AI (`1.3.5.1`), sau đó benchmark `>= 2` model Ollama trên `>= 10` câu tiếng Việt & dựng `OllamaClient` + `/api/v1/chat/health` (`1.3.5.2`).
+   - `[AI]` Push nhánh & mở PR cho task Benchmark Ollama + `OllamaClient` + `/api/v1/chat/health` (`1.3.5.2`), chuẩn bị cho Sprint 2: `US-15` (PO/PM duyệt chốt model LLM từ số liệu `ollama/BENCHMARK_REPORT.md`) và dựng lõi RAG (`rag_retriever.py`, `prompts.py`, `seed_ai.py`).
 
 ---
 
@@ -41,6 +41,28 @@
 ---
 
 ## Nhật ký các phiên làm việc
+
+### [2026-11-27 21:42 GMT+7] — Antigravity AI + AI Dev (Nguyễn Đoàn Trường Vũ) | WBS: `1.3.5.2`
+- **Mục tiêu phiên:** Benchmark `>= 2` model Ollama trên `>= 10` câu tiếng Việt, xây dựng `OllamaClient` bất đồng bộ và mở endpoint `GET /api/v1/chat/health` theo phân vùng Zero File-Overlap.
+- **Đã hoàn thành:**
+  - Xây dựng module `backend/app/ai/`: [config.py](../backend/app/ai/config.py) (`AISettings`), [schemas.py](../backend/app/ai/schemas.py) (`ChatHealthResponse`, `LoadedModelMemory`), [ollama_client.py](../backend/app/ai/ollama_client.py) (`OllamaClient`, fallback model tự động khi HTTP 404, chuẩn hóa `OllamaTimeoutError`/`OllamaUnavailableError`), và [__init__.py](../backend/app/ai/__init__.py).
+  - Xây dựng [chat_router.py](../backend/app/api/v1/chat_router.py) mở `GET /api/v1/chat/health` (tự động gắn vào `/api/v1` qua `router.py` không cần sửa file Core), trả `200 OK` khi Ollama sẵn sàng hoặc `503` kèm `is_fallback: true` khi gián đoạn/thiếu model.
+  - Thiết lập bộ `12` câu tiếng Việt 7 nhóm tại [benchmark_prompts.json](../ollama/benchmark_prompts.json), viết script đo tự động [run_benchmark.py](../ollama/run_benchmark.py), chạy đo thực tế trên `Ollama 0.40.18` (100% CPU, 16 GB RAM) cho 3 model và tổng hợp kết quả tại [benchmark_results.json](../ollama/benchmark_results.json) & [BENCHMARK_REPORT.md](../ollama/BENCHMARK_REPORT.md):
+    - `gemma3:4b`: `2754.96 MB` RAM, `13.54 tok/s`, trung bình `12.40 s`, thuần tiếng Việt `100%`, đạt `10/12` (`83.33%`; lộ prompt injection ở `Q11` nếu chưa có lớp Guardrails backend).
+    - `llama3.1:8b`: `5325.81 MB` RAM, `7.09 tok/s`, trung bình `9.06 s`, thuần tiếng Việt `100%`, đạt `11/12` (`91.67%`).
+    - `qwen2.5:7b`: `4835.05 MB` RAM, `8.01 tok/s`, trung bình `8.62 s`, thuần tiếng Việt `100%` (không lẫn CJK khi có system prompt chặt), đạt `12/12` (`100%`).
+  - Viết bộ kiểm thử [test_ollama_client_and_health.py](../backend/tests/ai/test_ollama_client_and_health.py) và tick `[x]` task `1.3.5.2` trong [ROADMAP.md](ROADMAP.md).
+- **Quyết định chốt:**
+  - Giữ mặc định `OLLAMA_MODEL=gemma3:4b` (nhẹ `2.69 GiB` RAM, tốc độ sinh token cao nhất) + `OLLAMA_FALLBACK_MODEL=llama3.1:8b`, đồng thời cung cấp đầy đủ số liệu cả `qwen2.5:7b` để PO/PM duyệt chốt chính thức tại Spike `US-15` (Sprint 2).
+  - Bắt buộc tách lớp `guardrails.py` ở Sprint 3 để chặn prompt injection/dị ứng/ngoài phạm vi bằng rule trước khi gọi LLM nhỏ.
+- **Vấn đề / Blocker:**
+  - Không có blocker; chạy thực tế trên CPU không có GPU rời nên lượt đầu chưa cache KV mất `15–26s`, cần giữ `keep_alive` và rút gọn system prompt khi vào Sprint 2–5 để đạt KPI `<= 5s`.
+- **Kiểm thử đã chạy:**
+  - Kiểm chứng trực tiếp `GET /api/v1/chat/health` với `ollama.exe serve` thật đang chạy → HTTP `200 OK` (`status="ok"`, `active_model="gemma3:4b"`, `is_fallback=false`).
+  - Back-end `pytest -v` (`tests/core/` + `tests/ai/`): đạt 100%.
+- **Bước tiếp theo:**
+  1. AI Dev tạo nhánh từ `develop` gắn mã Jira `MC-<số>`, commit và push lên GitHub để mở PR vào `develop`.
+  2. Sang Sprint 2: trình bày [BENCHMARK_REPORT.md](../ollama/BENCHMARK_REPORT.md) để PO & PM chốt model (`US-15`), sau đó dựng `rag_retriever.py`, `prompts.py` và `seed_ai.py`.
 
 ### [2026-11-27 17:45 GMT+7] — Antigravity AI + AI Dev (Nguyễn Đoàn Trường Vũ) | WBS: `1.3.5.1`
 - **Mục tiêu phiên:** Tạo `backend/app/models/ai_models.py` (`knowledge_docs`, `chat_sessions`, `chat_messages`) và Alembic migration nhánh `ai`, tuân thủ tuyệt đối Zero File-Overlap (không sửa `core_models.py` hay `alembic/env.py`).
