@@ -1,8 +1,10 @@
-"""FastAPI dependencies xác thực phiên đăng nhập JWT (dùng chung cho US-05..US-07)."""
+"""FastAPI dependencies xác thực phiên JWT và phân quyền RBAC 3 vai trò (US-05, US-07)."""
 
+from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Literal
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -16,6 +18,9 @@ from app.core.security import (
     mark_jti_revoked_in_memory,
 )
 from app.models.core_models import ReservationAuditLog, User
+
+UserRole = Literal["customer", "staff", "manager"]
+VALID_USER_ROLES: tuple[UserRole, ...] = ("customer", "staff", "manager")
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -101,3 +106,49 @@ def get_current_user(
     session: AuthenticatedSession = Depends(get_current_auth_session),
 ) -> User:
     return session.user
+
+
+def require_roles(*allowed_roles: UserRole) -> Callable[..., User]:
+    """Dependency kiểm tra vai trò RBAC ở tầng API: ngoài quyền trả 403 và ghi nhật ký."""
+    allowed_set = tuple(allowed_roles)
+
+    def _role_checker(
+        request: Request,
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db),
+    ) -> User:
+        if current_user.role not in allowed_set:
+            db.add(
+                ReservationAuditLog(
+                    actor_id=current_user.id,
+                    action="rbac_access_denied",
+                    old_value={"user_role": current_user.role},
+                    new_value={
+                        "method": request.method,
+                        "path": request.url.path,
+                        "allowed_roles": list(allowed_set),
+                    },
+                    reason=(
+                        f"Truy cập ngoài quyền: vai trò '{current_user.role}' "
+                        f"cố truy cập {request.method} {request.url.path}"
+                    ),
+                )
+            )
+            db.commit()
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "code": "FORBIDDEN",
+                    "message": "Bạn không có quyền thực hiện chức năng này.",
+                    "required_roles": list(allowed_set),
+                    "current_role": current_user.role,
+                },
+            )
+        return current_user
+
+    return _role_checker
+
+
+require_customer = require_roles("customer")
+require_staff_or_manager = require_roles("staff", "manager")
+require_manager = require_roles("manager")

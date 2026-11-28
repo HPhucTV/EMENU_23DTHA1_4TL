@@ -9,15 +9,15 @@
 | Hạng mục | Trạng thái hiện tại |
 | :--- | :--- |
 | **Sprint hiện tại** | **Sprint 1** *(đang triển khai `EP-01`, hướng tới mốc `M2` ngày `29/11/2026`)* |
-| **Mốc kế tiếp** | Hoàn tất kiểm chứng **`M2: Lưu Baseline MS Project (29/11/2026)`** & hoàn tất `US-07`, `US-08` |
-| **Tiến độ mã nguồn** | Đã hoàn tất **`US-01` (`MC-11`)**, **`US-02` (`MC-13`)**, **`US-04` (`MC-14`)**, **`US-05` (`MC-15`)**, **`MC-70`**, **`MC-71`**, **`MC-72`** (đều đã merge `develop`) và **`US-06` (`MC-16`)**: Quên & đặt lại mật khẩu qua email (`POST /api/v1/auth/forgot-password`, `GET /api/v1/auth/reset-password/validate`, `POST /api/v1/auth/reset-password`), token một lần hạn `15 phút` lưu băm `SHA-256`, mật khẩu mới băm `bcrypt`, giao diện `ForgotPasswordPage` & `ResetPasswordPage` |
+| **Mốc kế tiếp** | Hoàn tất kiểm chứng **`M2: Lưu Baseline MS Project (29/11/2026)`** & hoàn tất **`US-08`** (`CI GitHub Actions`) |
+| **Tiến độ mã nguồn** | Đã hoàn tất **`US-01` (`MC-11`)**, **`US-02` (`MC-13`)**, **`US-04` (`MC-14`)**, **`US-05` (`MC-15`)**, **`US-06` (`MC-16`)**, **`MC-70`**, **`MC-71`**, **`MC-72`** (đều đã merge `develop`) và **`US-07` (`MC-17`)**: Phân quyền RBAC 3 vai trò (`customer`, `staff`, `manager`) trả `403` + ghi audit log `rbac_access_denied`, API & giao diện Quản lý tạo/khóa/mở khóa tài khoản nhân viên (`/api/v1/users/*`, `/ops/staff`) |
 | **Hồ sơ & Tài liệu** | Đã có `AGENTS.md`, `docs/SYSTEM_SPEC.md`, `docs/ERD.md`, `docs/ROADMAP.md`, `docs/SESSION_LOG.md`, `docs/MS_PROJECT_BASELINE_M2.xml`, `docs/BASELINE_M2_REPORT.md`, `docs/DOR_DOD_QUALITY.md`, `docs/RISK_REGISTER.md`, `docs/PAYMENT_EMAIL_SMS_RESEARCH.md` (`MC-69`/`MC-70`), Chat Contract (`MC-68`), `ollama/BENCHMARK_REPORT.md` & bộ ảnh Figma (`PR #10`) |
-| **Quy ước đã chốt** | Jira key **`MC`** (`MC-xx`); nhóm **4 thành viên**; kiến trúc Zero File-Overlap; mật khẩu băm `bcrypt` (cost `12`), JWT `HS256` kèm thu hồi `jti`, token một lần băm `SHA-256`, `.gitguardian.yaml` loại trừ thư mục test |
+| **Quy ước đã chốt** | Jira key **`MC`** (`MC-xx`); nhóm **4 thành viên**; kiến trúc Zero File-Overlap; RBAC ép ở tầng API (`require_roles`) & Route Guard FE (`RoleProtectedRoute`) |
 
 ### Cảnh báo kỹ thuật & Blocker cần xử lý ngay
 1. **Môi trường Docker / PostgreSQL trên máy local**: Khi đẩy lên GitHub/Staging hoặc chạy Docker, thực thi `alembic upgrade heads` trên PostgreSQL 16 để đồng bộ đủ 16 bảng (`core` + `ai`).
 2. **Đầu việc kế tiếp trong Sprint 1**:
-   - `[FS]` Mở PR `MC-16` (`US-06`) vào `develop`, sau đó triển khai tiếp `US-07` (Phân quyền RBAC 3 vai trò trả `403` + log, Quản lý tạo/khóa/mở khóa tài khoản nhân viên) và `US-08` (CI bằng GitHub Actions).
+   - `[FS]` Mở PR `MC-17` (`US-07`) vào `develop`, sau đó triển khai **`US-08` (CI bằng GitHub Actions — build & test BE/FE tự động trên PR)** để chốt 100% phần việc Dev Fullstack Sprint 1.
    - `[BA]` Hoàn tất nghiệm thu `US-03` (Prototype Figma luồng chính).
 
 ---
@@ -41,6 +41,24 @@
 ---
 
 ## Nhật ký các phiên làm việc
+
+### [2026-11-28 20:16 GMT+7] — Antigravity AI + Dev Fullstack (Nguyễn Văn Tiến) | Nhánh: `MC-17-us-07-phan-quyền-va-tai-khoản-nhan-vien` | Jira: `MC-17`
+- **Mục tiêu phiên:** Đồng bộ nhánh `MC-17` lên `origin/develop` (`6a7d03f`) và triển khai trọn vẹn **`[US-07]` Phân quyền và tài khoản nhân viên** (`FR-01`: 3 vai trò Khách hàng/Nhân viên/Quản lý, truy cập ngoài quyền trả `403` + audit log, Quản lý tạo/khóa/mở khóa tài khoản Nhân viên).
+- **Đã hoàn thành:**
+  - Mở rộng [deps.py](../backend/app/core/deps.py): bổ sung dependency factory `require_roles(*allowed_roles)` (`require_customer`, `require_staff_or_manager`, `require_manager`); khi truy cập ngoài quyền tự động ghi `ReservationAuditLog` (`action="rbac_access_denied"`, kèm `method`, `path`, `user_role`, `allowed_roles`) và trả về `HTTP 403 FORBIDDEN`.
+  - Xây dựng [user_schemas.py](../backend/app/schemas/user_schemas.py), [user_service.py](../backend/app/services/user_service.py), [users_router.py](../backend/app/api/v1/users_router.py) và gắn vào [router.py](../backend/app/api/v1/router.py): cung cấp `GET /api/v1/users/ops-overview` (`staff` & `manager`), `GET /api/v1/users/staff`, `POST /api/v1/users/staff`, `PATCH /api/v1/users/staff/{id}/lock`, `PATCH /api/v1/users/staff/{id}/unlock` và `GET /api/v1/users/audit-logs` (chỉ `manager`); khóa tài khoản chặn ngay cả token đang sống lẫn đăng nhập mới.
+  - Xây dựng [RoleProtectedRoute.tsx](../frontend/src/components/RoleProtectedRoute.tsx), [ForbiddenPage.tsx](../frontend/src/pages/ForbiddenPage.tsx), [StaffManagementPage.tsx](../frontend/src/pages/StaffManagementPage.tsx), [users.ts](../frontend/src/types/users.ts), [usersApi.ts](../frontend/src/services/usersApi.ts); lọc sidebar theo vai trò tại [OperationsLayout.tsx](../frontend/src/layouts/OperationsLayout.tsx) và bọc phân quyền route tại [App.tsx](../frontend/src/App.tsx).
+  - Viết bộ kiểm thử tự động [test_rbac_and_staff.py](../backend/tests/core/test_rbac_and_staff.py) & [StaffManagementAndRbac.test.tsx](../frontend/src/test/StaffManagementAndRbac.test.tsx); cập nhật [ROADMAP.md](ROADMAP.md).
+- **Quyết định chốt:**
+  - Tài khoản nhân viên do Quản lý tạo được kích hoạt sẵn (`email_verified=True`, `is_active=True`); Quản lý không thể tự khóa tài khoản của chính mình; mọi hành động tạo/khóa/mở khóa và từ chối `403` đều ghi vào `reservation_audit_logs`.
+- **Vấn đề / Blocker:**
+  - Không có blocker.
+- **Kiểm thử đã chạy:**
+  - Back-end `pytest -v`: **`32/32 passed`** (`20` test Core gồm `US-01`, `US-02`, `US-04`, `US-05`, `US-06`, `US-07` + `12` test AI).
+  - Front-end `npm test` (`vitest run`): **`13/13 passed`** (`HomePage`, `RegisterPage`, `LoginPage`, `ForgotResetPasswordPage`, `StaffManagementAndRbac`); `npm run build` (`tsc -b && vite build`): **thành công (`0` lỗi)**.
+- **Bước tiếp theo:**
+  1. Commit, push nhánh `MC-17-us-07-phan-quyền-va-tai-khoản-nhan-vien` và mở PR `[MC-17] [US-07] Phân quyền RBAC 3 vai trò và quản lý tài khoản nhân viên` vào `develop`.
+  2. Triển khai **`US-08` (CI bằng GitHub Actions)** để hoàn tất Sprint 1.
 
 ### [2026-11-28 20:09 GMT+7] — Antigravity AI + Dev Fullstack (Nguyễn Văn Tiến) | Nhánh: `MC-16-us-06-quen-mật-khẩu` | Jira: `MC-16`
 - **Mục tiêu phiên:** Đồng bộ nhánh `MC-16` lên `origin/develop` (`92eafea`) và triển khai trọn vẹn **`[US-06]` Quên mật khẩu** (`FR-01`: gửi liên kết đặt lại có thời hạn, dùng `1` lần, mật khẩu mới lưu dạng băm `bcrypt`).

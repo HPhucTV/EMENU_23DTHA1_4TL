@@ -1,21 +1,32 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { getRoleDisplayLabel, useAuth } from '../context/AuthContext';
 import { formatDateTimeGMT7 } from '../lib/formatters';
+import type { UserRole } from '../types/auth';
 
-const SIDEBAR_LINKS = [
-  { to: '/ops', label: 'Tổng quan', end: true },
-  { to: '/ops/reservations', label: 'Đặt chỗ' },
-  { to: '/ops/tables', label: 'Sơ đồ bàn' },
-  { to: '/ops/menu', label: 'Thực đơn' },
-  { to: '/ops/kitchen', label: 'Chuẩn bị bếp' },
-  { to: '/ops/reports', label: 'Báo cáo' },
-  { to: '/ops/ai', label: 'Trợ lý AI' },
-  { to: '/ops/settings', label: 'Cài đặt' },
+const SIDEBAR_LINKS: Array<{
+  to: string;
+  label: string;
+  end?: boolean;
+  roles: UserRole[];
+}> = [
+  { to: '/ops', label: 'Tổng quan', end: true, roles: ['staff', 'manager'] },
+  { to: '/ops/reservations', label: 'Đặt chỗ', roles: ['staff', 'manager'] },
+  { to: '/ops/tables', label: 'Sơ đồ bàn', roles: ['staff', 'manager'] },
+  { to: '/ops/menu', label: 'Thực đơn', roles: ['staff', 'manager'] },
+  { to: '/ops/kitchen', label: 'Chuẩn bị bếp', roles: ['staff', 'manager'] },
+  { to: '/ops/staff', label: 'Nhân viên', roles: ['manager'] },
+  { to: '/ops/reports', label: 'Báo cáo', roles: ['manager'] },
+  { to: '/ops/ai', label: 'Trợ lý AI', roles: ['manager'] },
+  { to: '/ops/settings', label: 'Cài đặt', roles: ['manager'] },
 ];
 
 export function OperationsLayout() {
   const { user, isAuthenticated, logout, isLoggingOut } = useAuth();
   const navigate = useNavigate();
+
+  const visibleLinks = SIDEBAR_LINKS.filter((item) =>
+    user ? item.roles.includes(user.role) : false,
+  );
 
   const handleLogout = async () => {
     await logout();
@@ -34,7 +45,7 @@ export function OperationsLayout() {
           </Link>
 
           <nav className="mt-8 space-y-1.5">
-            {SIDEBAR_LINKS.map((item) => (
+            {visibleLinks.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
