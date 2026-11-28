@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { RoleProtectedRoute } from './components/RoleProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 import { CustomerLayout } from './layouts/CustomerLayout';
 import { OperationsLayout } from './layouts/OperationsLayout';
@@ -9,6 +10,7 @@ import { LoginPage } from './pages/LoginPage';
 import { PlaceholderPage } from './pages/PlaceholderPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
+import { StaffManagementPage } from './pages/StaffManagementPage';
 import { VerifyEmailPage } from './pages/VerifyEmailPage';
 
 const queryClient = new QueryClient({
@@ -43,21 +45,25 @@ export function App() {
               <Route
                 path="/booking"
                 element={
-                  <PlaceholderPage
-                    title="Đặt một cuộc hẹn ngon"
-                    storyRef="Sprint 3–4 • US-17..US-25"
-                    description="Luồng chọn bàn theo khung giờ GMT+7 (giữ chỗ 10 phút chống trùng bàn) và đặt cọc Sandbox."
-                  />
+                  <RoleProtectedRoute allowedRoles={['customer', 'staff', 'manager']}>
+                    <PlaceholderPage
+                      title="Đặt một cuộc hẹn ngon"
+                      storyRef="Sprint 3–4 • US-17..US-25"
+                      description="Luồng chọn bàn theo khung giờ GMT+7 (giữ chỗ 10 phút chống trùng bàn) và đặt cọc Sandbox."
+                    />
+                  </RoleProtectedRoute>
                 }
               />
               <Route
                 path="/my-bookings"
                 element={
-                  <PlaceholderPage
-                    title="Đặt chỗ của tôi"
-                    storyRef="Sprint 4 • US-26"
-                    description="Quản lý cuộc hẹn sắp tới, xem mức hoàn cọc theo chính sách (100% / 50% / 0%) và hủy đặt chỗ."
-                  />
+                  <RoleProtectedRoute allowedRoles={['customer', 'staff', 'manager']}>
+                    <PlaceholderPage
+                      title="Đặt chỗ của tôi"
+                      storyRef="Sprint 4 • US-26"
+                      description="Quản lý cuộc hẹn sắp tới, xem mức hoàn cọc theo chính sách (100% / 50% / 0%) và hủy đặt chỗ."
+                    />
+                  </RoleProtectedRoute>
                 }
               />
               <Route path="/login" element={<LoginPage />} />
@@ -67,7 +73,14 @@ export function App() {
               <Route path="/reset-password" element={<ResetPasswordPage />} />
             </Route>
 
-            <Route path="/ops" element={<OperationsLayout />}>
+            <Route
+              path="/ops"
+              element={
+                <RoleProtectedRoute allowedRoles={['staff', 'manager']}>
+                  <OperationsLayout />
+                </RoleProtectedRoute>
+              }
+            >
               <Route
                 index
                 element={
@@ -86,6 +99,50 @@ export function App() {
                     storyRef="Sprint 5 • US-31..US-33"
                     description="Điểm điều hướng mặc định của vai trò Nhân viên (staff): xử lý check-in, hoàn thành, đánh dấu không đến và đổi bàn."
                   />
+                }
+              />
+              <Route
+                path="staff"
+                element={
+                  <RoleProtectedRoute allowedRoles={['manager']}>
+                    <StaffManagementPage />
+                  </RoleProtectedRoute>
+                }
+              />
+              <Route
+                path="reports"
+                element={
+                  <RoleProtectedRoute allowedRoles={['manager']}>
+                    <PlaceholderPage
+                      title="Báo cáo thống kê vận hành"
+                      storyRef="Sprint 6 • US-36 (Chỉ Quản lý)"
+                      description="Theo dõi số đơn theo trạng thái, tỷ lệ hủy/no-show và doanh thu đặt cọc (chỉ vai trò Quản lý được phép truy cập)."
+                    />
+                  </RoleProtectedRoute>
+                }
+              />
+              <Route
+                path="settings"
+                element={
+                  <RoleProtectedRoute allowedRoles={['manager']}>
+                    <PlaceholderPage
+                      title="Cài đặt tham số nghiệp vụ"
+                      storyRef="Sprint 3 • US-20 (Chỉ Quản lý)"
+                      description="Cấu hình lượt phục vụ, thời gian giữ chỗ, mức cọc và chính sách hoàn cọc (chỉ vai trò Quản lý được phép truy cập)."
+                    />
+                  </RoleProtectedRoute>
+                }
+              />
+              <Route
+                path="ai"
+                element={
+                  <RoleProtectedRoute allowedRoles={['manager']}>
+                    <PlaceholderPage
+                      title="Quản trị tri thức & Giám sát Trợ lý AI"
+                      storyRef="Mở rộng • US-46 (Chỉ Quản lý)"
+                      description="Quản trị tri thức FAQ và theo dõi hội thoại AI đã che PII (chỉ vai trò Quản lý được phép truy cập)."
+                    />
+                  </RoleProtectedRoute>
                 }
               />
               <Route
