@@ -1,4 +1,5 @@
-import { Link, NavLink, Outlet } from 'react-router-dom';
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { getRoleDisplayLabel, useAuth } from '../context/AuthContext';
 import { formatDateTimeGMT7 } from '../lib/formatters';
 
 const SIDEBAR_LINKS = [
@@ -13,6 +14,14 @@ const SIDEBAR_LINKS = [
 ];
 
 export function OperationsLayout() {
+  const { user, isAuthenticated, logout, isLoggingOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login', { replace: true });
+  };
+
   return (
     <div className="min-h-screen flex bg-cream text-stone-900">
       <aside className="w-64 shrink-0 bg-brand text-stone-100 flex flex-col justify-between p-6">
@@ -44,10 +53,34 @@ export function OperationsLayout() {
           </nav>
         </div>
 
-        <div className="pt-6 border-t border-white/15 text-xs text-stone-300 space-y-2">
-          <p className="font-medium text-white">Nhà hàng Vườn Phố</p>
-          <p>1 cơ sở • TP. Hồ Chí Minh</p>
-          <Link to="/" className="inline-block text-amber-200 hover:underline pt-1">
+        <div className="pt-6 border-t border-white/15 text-xs text-stone-300 space-y-2.5">
+          <div>
+            <p className="font-medium text-white">NHÀ HÀNG VƯỜN PHỐ</p>
+            <p>1 cơ sở • TP. Hồ Chí Minh</p>
+          </div>
+
+          {isAuthenticated && user ? (
+            <div className="pt-2 border-t border-white/10 flex items-center justify-between gap-2">
+              <div className="truncate">
+                <p className="font-semibold text-white truncate">{user.full_name}</p>
+                <p className="text-[11px] text-amber-200">{getRoleDisplayLabel(user.role)}</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="rounded-md bg-white/10 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-white/20 transition-colors shrink-0"
+              >
+                Đăng xuất
+              </button>
+            </div>
+          ) : (
+            <Link to="/login" className="inline-block text-amber-200 hover:underline">
+              Đăng nhập vận hành →
+            </Link>
+          )}
+
+          <Link to="/" className="block text-stone-300 hover:text-white pt-1">
             ← Về giao diện khách hàng
           </Link>
         </div>
@@ -55,7 +88,9 @@ export function OperationsLayout() {
 
       <div className="flex-1 flex flex-col min-w-0">
         <header className="h-16 bg-white/80 border-b border-stone-200 px-8 flex items-center justify-between text-sm">
-          <span className="text-stone-500">Vận hành / Khung dự án US-01</span>
+          <span className="text-stone-500">
+            Vận hành / {user ? getRoleDisplayLabel(user.role) : 'Khách'}
+          </span>
           <span className="font-medium text-stone-700">
             {formatDateTimeGMT7(new Date())} (GMT+7)
           </span>
