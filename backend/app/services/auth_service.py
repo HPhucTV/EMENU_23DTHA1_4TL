@@ -21,17 +21,24 @@ from app.core.timezone import VN_TZ, now_gmt7
 from app.models.core_models import PasswordResetToken, ReservationAuditLog, User
 from app.schemas.auth_schemas import (
     CurrentUserResponse,
+    ForgotPasswordResponse,
     LoginRequest,
     LoginResponse,
     LogoutResponse,
     RegisteredUserRead,
     RegisterRequest,
     RegisterResponse,
+    ResetPasswordRequest,
+    ResetPasswordResponse,
+    ValidateResetTokenResponse,
     VerifyEmailResponse,
     normalize_login_identifier,
     resolve_role_redirect_path,
 )
-from app.services.email_service import send_verification_email
+from app.services.email_service import (
+    send_password_reset_email,
+    send_verification_email,
+)
 
 
 class DuplicateAccountError(Exception):
@@ -159,37 +166,72 @@ def register_customer(db: Session, payload: RegisterRequest) -> RegisterResponse
     )
 
 
-def verify_customer_email(db: Session, raw_token: str) -> VerifyEmailResponse:
-    """Xác thực địa chỉ email bằng token một lần (FR-01 — US-04)."""
+def _invalidate_unused_tokens(
+    db: Session, user_id: int, purpose: str, current_time: datetime
+) -> None:
+    """Đánh dấu đã sử dụng đối với các token cùng mục đích chưa dùng trước đó."""
+    unused_tokens = (
+        db.execute(
+            select(PasswordResetToken).where(
+                PasswordResetToken.user_id == user_id,
+                PasswordResetToken.purpose == purpose,
+                PasswordResetToken.used_at.is_(None),
+            )
+        )
+        .scalars()
+        .all()
+    )
+    for old_token in unused_tokens:
+        old_token.used_at = current_time
+
+
+def _get_valid_one_time_token(
+    db: Session,
+    *,
+    raw_token: str,
+    purpose: str,
+    invalid_message: str,
+    used_message: str,
+    expired_message: str,
+) -> PasswordResetToken:
+    """Tra cứu và kiểm tra tính hợp lệ, chưa sử dụng, còn hạn của token một lần."""
     token_hash = hash_one_time_token(raw_token)
     token_record = db.execute(
         select(PasswordResetToken).where(
             PasswordResetToken.token_hash == token_hash,
-            PasswordResetToken.purpose == "email_verify",
+            PasswordResetToken.purpose == purpose,
         )
     ).scalar_one_or_none()
 
     if token_record is None:
-        raise VerificationTokenError(
-            "Liên kết xác thực không hợp lệ hoặc không tồn tại."
-        )
+        raise VerificationTokenError(invalid_message)
 
     if token_record.used_at is not None:
-        raise VerificationTokenError(
-            "Liên kết xác thực này đã được sử dụng trước đó."
-        )
+        raise VerificationTokenError(used_message)
 
     current_time = now_gmt7()
     if _ensure_gmt7(token_record.expires_at) <= current_time:
-        raise VerificationTokenError(
-            "Liên kết xác thực đã hết hạn. Vui lòng yêu cầu gửi lại email xác thực mới."
-        )
+        raise VerificationTokenError(expired_message)
+
+    return token_record
+
+
+def verify_customer_email(db: Session, raw_token: str) -> VerifyEmailResponse:
+    """Xác thực địa chỉ email bằng token một lần (FR-01 — US-04)."""
+    token_record = _get_valid_one_time_token(
+        db,
+        raw_token=raw_token,
+        purpose="email_verify",
+        invalid_message="Liên kết xác thực không hợp lệ hoặc không tồn tại.",
+        used_message="Liên kết xác thực này đã được sử dụng trước đó.",
+        expired_message="Liên kết xác thực đã hết hạn. Vui lòng yêu cầu gửi lại email xác thực mới.",
+    )
 
     user = db.get(User, token_record.user_id)
     if user is None:
         raise VerificationTokenError("Không tìm thấy tài khoản tương ứng.", 404)
 
-    token_record.used_at = current_time
+    token_record.used_at = now_gmt7()
     user.email_verified = True
     db.commit()
 
@@ -216,19 +258,7 @@ def resend_verification_email(db: Session, email: str) -> VerifyEmailResponse:
         )
 
     current_time = now_gmt7()
-    unused_tokens = (
-        db.execute(
-            select(PasswordResetToken).where(
-                PasswordResetToken.user_id == user.id,
-                PasswordResetToken.purpose == "email_verify",
-                PasswordResetToken.used_at.is_(None),
-            )
-        )
-        .scalars()
-        .all()
-    )
-    for old_token in unused_tokens:
-        old_token.used_at = current_time
+    _invalidate_unused_tokens(db, user.id, "email_verify", current_time)
 
     settings = get_settings()
     raw_token, token_hash = generate_one_time_token()
@@ -408,4 +438,121 @@ def build_current_user_response(
         user=RegisteredUserRead.model_validate(user),
         redirect_path=resolve_role_redirect_path(user.role),
         session_expires_at=token_data.expires_at,
+    )
+
+
+def request_password_reset(db: Session, email: str) -> ForgotPasswordResponse:
+    """Tạo token đặt lại mật khẩu một lần có thời hạn và gửi qua email (FR-01 — US-06)."""
+    settings = get_settings()
+    expire_minutes = settings.password_reset_expire_minutes
+    generic_message = (
+        f"Nếu email {email} đã được đăng ký, hệ thống đã gửi liên kết đặt lại mật khẩu "
+        f"(có hiệu lực trong {expire_minutes} phút, chỉ dùng 1 lần)."
+    )
+
+    user = db.execute(select(User).where(User.email == email)).scalar_one_or_none()
+    if user is None or not user.is_active:
+        return ForgotPasswordResponse(
+            message=generic_message,
+            expires_in_minutes=expire_minutes,
+        )
+
+    current_time = now_gmt7()
+    _invalidate_unused_tokens(db, user.id, "password_reset", current_time)
+
+    raw_token, token_hash = generate_one_time_token()
+    db.add(
+        PasswordResetToken(
+            user_id=user.id,
+            token_hash=token_hash,
+            purpose="password_reset",
+            expires_at=current_time + timedelta(minutes=expire_minutes),
+        )
+    )
+    db.add(
+        ReservationAuditLog(
+            actor_id=user.id,
+            action="auth_password_reset_requested",
+            new_value={"email": user.email, "expires_in_minutes": expire_minutes},
+        )
+    )
+    db.commit()
+
+    send_password_reset_email(
+        to_email=user.email,
+        full_name=user.full_name,
+        raw_token=raw_token,
+    )
+
+    return ForgotPasswordResponse(
+        message=generic_message,
+        expires_in_minutes=expire_minutes,
+    )
+
+
+def validate_password_reset_token(
+    db: Session, raw_token: str
+) -> ValidateResetTokenResponse:
+    """Kiểm tra liên kết đặt lại mật khẩu còn hạn và chưa sử dụng trước khi nhập mật khẩu mới."""
+    token_record = _get_valid_one_time_token(
+        db,
+        raw_token=raw_token,
+        purpose="password_reset",
+        invalid_message="Liên kết đặt lại mật khẩu không hợp lệ hoặc không tồn tại.",
+        used_message="Liên kết đặt lại mật khẩu này đã được sử dụng. Vui lòng gửi yêu cầu mới.",
+        expired_message="Liên kết đặt lại mật khẩu đã hết hạn. Vui lòng gửi yêu cầu mới.",
+    )
+    user = db.get(User, token_record.user_id)
+    if user is None or not user.is_active:
+        raise VerificationTokenError(
+            "Tài khoản không tồn tại hoặc đang bị khóa.", status_code=403
+        )
+    return ValidateResetTokenResponse(
+        valid=True,
+        message="Liên kết hợp lệ. Vui lòng nhập mật khẩu mới của bạn.",
+    )
+
+
+def confirm_password_reset(
+    db: Session, payload: ResetPasswordRequest
+) -> ResetPasswordResponse:
+    """Xác nhận đặt lại mật khẩu mới (băm bcrypt), vô hiệu hóa token dùng 1 lần và mở khóa tạm."""
+    token_record = _get_valid_one_time_token(
+        db,
+        raw_token=payload.token,
+        purpose="password_reset",
+        invalid_message="Liên kết đặt lại mật khẩu không hợp lệ hoặc không tồn tại.",
+        used_message="Liên kết đặt lại mật khẩu này đã được sử dụng. Vui lòng gửi yêu cầu mới.",
+        expired_message="Liên kết đặt lại mật khẩu đã hết hạn. Vui lòng gửi yêu cầu mới.",
+    )
+
+    user = db.get(User, token_record.user_id)
+    if user is None:
+        raise VerificationTokenError("Không tìm thấy tài khoản tương ứng.", 404)
+    if not user.is_active:
+        raise VerificationTokenError(
+            "Tài khoản đang bị khóa hoạt động. Vui lòng liên hệ Quản lý.", 403
+        )
+
+    current_time = now_gmt7()
+    token_record.used_at = current_time
+    _invalidate_unused_tokens(db, user.id, "password_reset", current_time)
+
+    user.password_hash = hash_password(payload.new_password)
+    user.failed_login_attempts = 0
+    user.locked_until = None
+
+    db.add(
+        ReservationAuditLog(
+            actor_id=user.id,
+            action="auth_password_reset_completed",
+            new_value={"email": user.email},
+            reason="Đặt lại mật khẩu qua liên kết email một lần",
+        )
+    )
+    db.commit()
+
+    return ResetPasswordResponse(
+        message="Đặt lại mật khẩu thành công! Bạn có thể đăng nhập bằng mật khẩu mới ngay bây giờ.",
+        email=user.email,
     )

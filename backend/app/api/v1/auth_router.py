@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
@@ -10,12 +10,17 @@ from app.core.database import get_db
 from app.core.deps import AuthenticatedSession, get_current_auth_session
 from app.schemas.auth_schemas import (
     CurrentUserResponse,
+    ForgotPasswordRequest,
+    ForgotPasswordResponse,
     LoginRequest,
     LoginResponse,
     LogoutResponse,
     RegisterRequest,
     RegisterResponse,
     ResendVerificationRequest,
+    ResetPasswordRequest,
+    ResetPasswordResponse,
+    ValidateResetTokenResponse,
     VerifyEmailRequest,
     VerifyEmailResponse,
 )
@@ -25,9 +30,12 @@ from app.services.auth_service import (
     VerificationTokenError,
     authenticate_user,
     build_current_user_response,
+    confirm_password_reset,
     register_customer,
+    request_password_reset,
     resend_verification_email,
     revoke_user_session,
+    validate_password_reset_token,
     verify_customer_email,
 )
 
@@ -154,6 +162,64 @@ def resend_verification_endpoint(
             content={
                 "detail": {
                     "code": "VERIFICATION_RESEND_FAILED",
+                    "message": exc.message,
+                }
+            },
+        )
+
+
+@router.post(
+    "/forgot-password",
+    response_model=ForgotPasswordResponse,
+    summary="Gửi liên kết đặt lại mật khẩu có thời hạn (1 lần) qua email",
+)
+def forgot_password_endpoint(
+    payload: ForgotPasswordRequest,
+    db: Session = Depends(get_db),
+) -> ForgotPasswordResponse:
+    return request_password_reset(db=db, email=payload.email)
+
+
+@router.get(
+    "/reset-password/validate",
+    response_model=ValidateResetTokenResponse,
+    summary="Kiểm tra liên kết đặt lại mật khẩu còn hạn và chưa được sử dụng",
+)
+def validate_reset_token_endpoint(
+    token: str = Query(min_length=10, description="Token đặt lại mật khẩu"),
+    db: Session = Depends(get_db),
+) -> ValidateResetTokenResponse | JSONResponse:
+    try:
+        return validate_password_reset_token(db=db, raw_token=token)
+    except VerificationTokenError as exc:
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "detail": {
+                    "code": "INVALID_RESET_TOKEN",
+                    "message": exc.message,
+                }
+            },
+        )
+
+
+@router.post(
+    "/reset-password",
+    response_model=ResetPasswordResponse,
+    summary="Đặt lại mật khẩu mới (lưu băm bcrypt) bằng token một lần",
+)
+def reset_password_endpoint(
+    payload: ResetPasswordRequest,
+    db: Session = Depends(get_db),
+) -> ResetPasswordResponse | JSONResponse:
+    try:
+        return confirm_password_reset(db=db, payload=payload)
+    except VerificationTokenError as exc:
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "detail": {
+                    "code": "INVALID_RESET_TOKEN",
                     "message": exc.message,
                 }
             },

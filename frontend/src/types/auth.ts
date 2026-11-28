@@ -58,6 +58,27 @@ export interface VerifyEmailResponse {
   email_verified: boolean;
 }
 
+export interface ForgotPasswordResponse {
+  message: string;
+  expires_in_minutes: number;
+}
+
+export interface ValidateResetTokenResponse {
+  valid: boolean;
+  message: string;
+}
+
+export interface ResetPasswordPayload {
+  token: string;
+  new_password: string;
+  confirm_password: string;
+}
+
+export interface ResetPasswordResponse {
+  message: string;
+  email: string;
+}
+
 export interface ApiErrorDetail {
   code?: string;
   message?: string;
