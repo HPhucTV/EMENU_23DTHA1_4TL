@@ -124,7 +124,7 @@
 **Task song song Sprint 1:**
 - [x] `[PM]` Lưu Baseline MS Project (`M2`), lập DoR/DoD, Sổ rủi ro v1.0 và chốt Sandbox (`1.3.1.1–2`, `MC-70`) — *PM/SM* *(tệp [MS_PROJECT_BASELINE_M2.xml](MS_PROJECT_BASELINE_M2.xml), [BASELINE_M2_REPORT.md](BASELINE_M2_REPORT.md), [DOR_DOD_QUALITY.md](DOR_DOD_QUALITY.md), [RISK_REGISTER.md](RISK_REGISTER.md), [PAYMENT_EMAIL_SMS_RESEARCH.md](PAYMENT_EMAIL_SMS_RESEARCH.md))*
 - [x] `[AI]` Tạo `ai_models.py` (`knowledge_docs`, `chat_sessions`, `chat_messages`) & migration `alembic/*_ai_*`, không sửa `core_models.py` (`1.3.5.1`) — *AI Dev* *(tệp [ai_models.py](../backend/app/models/ai_models.py), [20261127_0001_ai_initial_tables.py](../backend/alembic/versions/20261127_0001_ai_initial_tables.py))*
-- [ ] `[AI]` Benchmark `>= 2` model Ollama trên `>= 10` câu tiếng Việt & dựng `OllamaClient` + `/api/v1/chat/health` (`1.3.5.2`) — *AI Dev*
+- [x] `[AI]` Benchmark `>= 2` model Ollama trên `>= 10` câu tiếng Việt & dựng `OllamaClient` + `/api/v1/chat/health` (`1.3.5.2`) — *AI Dev* *(tệp [ollama_client.py](../backend/app/ai/ollama_client.py), [chat_router.py](../backend/app/api/v1/chat_router.py), [BENCHMARK_REPORT.md](../ollama/BENCHMARK_REPORT.md))*
 
 ---
 
